@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, username, passwordHash, name FROM admin_users;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4G5vcjpBDodhjLP.root --database iEKTWpNhR5h4VoUdqcFMPB --execute SELECT id, username, passwordHash, name FROM admin_users;",
+  "rows": [
+    {
+      "id": "1",
+      "username": "admin",
+      "passwordHash": "$2b$12$JZeUqwBZvppNpSkT9PF4ieCXo2N4FzmoAfnsJZapg81N5CPIIgM.G",
+      "name": "Admin"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tusername\tpasswordHash\tname\n1\tadmin\t$2b$12$JZeUqwBZvppNpSkT9PF4ieCXo2N4FzmoAfnsJZapg81N5CPIIgM.G\tAdmin\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

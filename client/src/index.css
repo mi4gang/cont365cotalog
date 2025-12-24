@@ -43,16 +43,25 @@
 }
 
 :root {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-600);
-  --sidebar-primary-foreground: var(--color-blue-50);
+  --primary: oklch(0.546 0.245 262.881);
+  --primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.546 0.245 262.881);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
   --chart-1: var(--color-blue-300);
   --chart-2: var(--color-blue-500);
   --chart-3: var(--color-blue-600);
   --chart-4: var(--color-blue-700);
   --chart-5: var(--color-blue-800);
-  --radius: 0.65rem;
+  --radius: 0.5rem;
+  
+  /* Catalog specific colors */
+  --catalog-bg: oklch(0.178 0.025 260);
+  --catalog-card: oklch(0.228 0.025 260);
+  --catalog-text: oklch(0.985 0 0);
+  --catalog-muted: oklch(0.7 0.01 260);
+  --catalog-price: oklch(0.852 0.199 91.936);
+  --success: oklch(0.696 0.17 162.48);
+  --success-foreground: oklch(0.985 0 0);
   --background: oklch(1 0 0);
   --foreground: oklch(0.235 0.015 65);
   --card: oklch(1 0 0);
@@ -134,24 +143,11 @@
 }
 
 @layer components {
-  /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
-   */
   .container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
+    padding-left: 1rem;
     padding-right: 1rem;
   }
 
@@ -162,16 +158,71 @@
 
   @media (min-width: 640px) {
     .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
+      padding-left: 1.5rem;
       padding-right: 1.5rem;
     }
   }
 
   @media (min-width: 1024px) {
     .container {
-      padding-left: 2rem; /* 32px - desktop padding */
+      padding-left: 2rem;
       padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
+      max-width: 1280px;
     }
+  }
+  
+  /* Catalog theme - dark background */
+  .catalog-theme {
+    background-color: var(--catalog-bg);
+    color: var(--catalog-text);
+    min-height: 100vh;
+  }
+  
+  .catalog-card {
+    background-color: var(--catalog-card);
+    border-radius: var(--radius);
+  }
+  
+  /* Price styling */
+  .price-text {
+    color: var(--catalog-price);
+    font-weight: 700;
+  }
+  
+  /* Status badges */
+  .badge-new {
+    background-color: var(--success);
+    color: var(--success-foreground);
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .badge-used {
+    background-color: oklch(0.45 0.01 260);
+    color: oklch(0.95 0 0);
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  /* Photo gallery thumbnail */
+  .thumbnail-active {
+    border: 2px solid var(--catalog-price);
+  }
+  
+  /* WhatsApp button */
+  .whatsapp-btn {
+    border: 2px solid var(--success);
+    color: var(--success);
+    background: transparent;
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .whatsapp-btn:hover {
+    background: var(--success);
+    color: var(--success-foreground);
   }
 }

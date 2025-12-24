@@ -1,11 +1,17 @@
-import { eq } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import bcrypt from "bcryptjs";
+import { 
+  InsertUser, users, 
+  adminUsers, InsertAdminUser, AdminUser,
+  containers, InsertContainer, Container,
+  containerPhotos, InsertContainerPhoto, ContainerPhoto,
+  importHistory, InsertImportHistory
+} from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -17,6 +23,262 @@ export async function getDb() {
   }
   return _db;
 }
+
+// ==================== Admin Users ====================
+
+export async function createAdminUser(username: string, password: string, name?: string): Promise<AdminUser | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  
+  await db.insert(adminUsers).values({
+    username,
+    passwordHash,
+    name: name || null,
+  });
+
+  const result = await getAdminUserByUsername(username);
+  return result ?? null;
+}
+
+export async function getAdminUserByUsername(username: string): Promise<AdminUser | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(adminUsers).where(eq(adminUsers.username, username)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getAdminUserById(id: number): Promise<AdminUser | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(adminUsers).where(eq(adminUsers.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function verifyAdminPassword(username: string, password: string): Promise<AdminUser | null> {
+  const user = await getAdminUserByUsername(username);
+  if (!user) return null;
+
+  const isValid = await bcrypt.compare(password, user.passwordHash);
+  if (!isValid) return null;
+
+  // Update last signed in
+  const db = await getDb();
+  if (db) {
+    await db.update(adminUsers)
+      .set({ lastSignedIn: new Date() })
+      .where(eq(adminUsers.id, user.id));
+  }
+
+  return user;
+}
+
+export async function updateAdminPassword(userId: number, newPassword: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await db.update(adminUsers)
+    .set({ passwordHash })
+    .where(eq(adminUsers.id, userId));
+  
+  return true;
+}
+
+// ==================== Containers ====================
+
+export async function getAllContainers(activeOnly: boolean = true): Promise<Container[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  if (activeOnly) {
+    return db.select().from(containers).where(eq(containers.isActive, true)).orderBy(containers.id);
+  }
+  return db.select().from(containers).orderBy(containers.id);
+}
+
+export async function getContainerById(id: number): Promise<Container | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(containers).where(eq(containers.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getContainerByExternalId(externalId: string): Promise<Container | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(containers).where(eq(containers.externalId, externalId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createContainer(data: InsertContainer): Promise<Container | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db.insert(containers).values(data);
+  const result = await getContainerByExternalId(data.externalId);
+  return result ?? null;
+}
+
+export async function updateContainer(id: number, data: Partial<InsertContainer>): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.update(containers).set(data).where(eq(containers.id, id));
+  return true;
+}
+
+export async function deactivateContainersNotIn(externalIds: string[]): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+
+  if (externalIds.length === 0) {
+    // Deactivate all
+    const result = await db.update(containers)
+      .set({ isActive: false })
+      .where(eq(containers.isActive, true));
+    return 0;
+  }
+
+  await db.update(containers)
+    .set({ isActive: false })
+    .where(and(
+      eq(containers.isActive, true),
+      sql`${containers.externalId} NOT IN (${sql.join(externalIds.map(id => sql`${id}`), sql`, `)})`
+    ));
+  
+  return 0;
+}
+
+// ==================== Container Photos ====================
+
+export async function getPhotosByContainerId(containerId: number): Promise<ContainerPhoto[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select()
+    .from(containerPhotos)
+    .where(eq(containerPhotos.containerId, containerId))
+    .orderBy(containerPhotos.displayOrder);
+}
+
+export async function getMainPhotoByContainerId(containerId: number): Promise<ContainerPhoto | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  // First try to get the main photo
+  let result = await db.select()
+    .from(containerPhotos)
+    .where(and(
+      eq(containerPhotos.containerId, containerId),
+      eq(containerPhotos.isMain, true)
+    ))
+    .limit(1);
+
+  // If no main photo, get the first one by display order
+  if (result.length === 0) {
+    result = await db.select()
+      .from(containerPhotos)
+      .where(eq(containerPhotos.containerId, containerId))
+      .orderBy(containerPhotos.displayOrder)
+      .limit(1);
+  }
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function addContainerPhoto(data: InsertContainerPhoto): Promise<ContainerPhoto | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [result] = await db.insert(containerPhotos).values(data).$returningId();
+  
+  const photos = await db.select()
+    .from(containerPhotos)
+    .where(eq(containerPhotos.id, result.id))
+    .limit(1);
+  
+  return photos.length > 0 ? photos[0] : null;
+}
+
+export async function updatePhotoOrder(photoId: number, displayOrder: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.update(containerPhotos)
+    .set({ displayOrder })
+    .where(eq(containerPhotos.id, photoId));
+  
+  return true;
+}
+
+export async function setMainPhoto(containerId: number, photoId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  // First, unset all main photos for this container
+  await db.update(containerPhotos)
+    .set({ isMain: false })
+    .where(eq(containerPhotos.containerId, containerId));
+
+  // Then set the new main photo
+  await db.update(containerPhotos)
+    .set({ isMain: true })
+    .where(eq(containerPhotos.id, photoId));
+
+  return true;
+}
+
+export async function deletePhotosByContainerId(containerId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.delete(containerPhotos).where(eq(containerPhotos.containerId, containerId));
+  return true;
+}
+
+export async function deletePhoto(photoId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.delete(containerPhotos).where(eq(containerPhotos.id, photoId));
+  return true;
+}
+
+// ==================== Import History ====================
+
+export async function createImportRecord(data: InsertImportHistory): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [result] = await db.insert(importHistory).values(data).$returningId();
+  return result.id;
+}
+
+export async function updateImportRecord(id: number, data: Partial<InsertImportHistory>): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.update(importHistory).set(data).where(eq(importHistory.id, id));
+  return true;
+}
+
+export async function getImportHistory(limit: number = 20) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select()
+    .from(importHistory)
+    .orderBy(sql`${importHistory.createdAt} DESC`)
+    .limit(limit);
+}
+
+// ==================== Original User Functions (for Manus OAuth compatibility) ====================
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
@@ -85,8 +347,5 @@ export async function getUserByOpenId(openId: string) {
   }
 
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
   return result.length > 0 ? result[0] : undefined;
 }
-
-// TODO: add feature queries here as your schema grows.
