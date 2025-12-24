@@ -49,3 +49,24 @@
 ## Pending (User Actions)
 - [ ] Custom domain binding (configure via Manus Settings → Domains)
 - [ ] Production deployment (click Publish button in Manus UI)
+
+
+## Pixel-Perfect Frontend Recreation (COMPLETED)
+- [x] Extract and analyze all CSS from HTTrack archive (index-HRTMR40D.css)
+- [x] Copy background images, logo, and all visual assets
+- [x] Recreate identical Header with exact fonts, spacing, colors
+- [x] Recreate identical logo with "365" styling and positioning
+- [x] Recreate WhatsApp link with green hover effect
+- [x] Recreate phone number with exact styling
+- [x] Recreate filter buttons with exact size, color, border-radius
+- [x] Recreate dropdown menus with exact styling and hover effects
+- [x] Recreate container cards with exact dimensions and styling
+- [x] Implement orange glow effect on card hover
+- [x] Implement image zoom effect on hover
+- [x] Recreate "Смотреть" button with orange hover glow
+- [x] Recreate badge styling (Новый/Б/У) with exact colors
+- [x] Recreate price styling with exact font and color (70 000.00 ₽ format)
+- [x] Recreate glassmorphism effect on filter panel
+- [x] Recreate container detail page with identical gallery
+- [x] Recreate all hover/focus/active states
+- [x] Final visual comparison with original

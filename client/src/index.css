@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
@@ -40,6 +41,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --font-noto: "Noto Sans SC", sans-serif;
 }
 
 :root {
@@ -54,12 +56,20 @@
   --chart-5: var(--color-blue-800);
   --radius: 0.5rem;
   
-  /* Catalog specific colors */
-  --catalog-bg: oklch(0.178 0.025 260);
-  --catalog-card: oklch(0.228 0.025 260);
-  --catalog-text: oklch(0.985 0 0);
-  --catalog-muted: oklch(0.7 0.01 260);
-  --catalog-price: oklch(0.852 0.199 91.936);
+  /* Exact colors from original site */
+  --catalog-bg: oklch(0.208 0.042 265.755);
+  --catalog-orange: #c97a3a;
+  --catalog-orange-rgb: 201, 122, 58;
+  --catalog-button-bg: #515a7a;
+  --catalog-text-muted: rgb(200, 200, 200);
+  --catalog-price: rgb(255, 140, 50);
+  --catalog-card-gradient-from: rgba(51, 65, 85, 0.75);
+  --catalog-card-gradient-to: rgba(30, 41, 59, 0.65);
+  --catalog-filter-gradient-from: rgba(30, 41, 59, 0.5);
+  --catalog-filter-gradient-to: rgba(15, 23, 42, 0.45);
+  --catalog-border: rgba(100, 116, 139, 0.3);
+  --catalog-border-light: rgba(100, 116, 139, 0.2);
+  
   --success: oklch(0.696 0.17 162.48);
   --success-foreground: oklch(0.985 0 0);
   --background: oklch(1 0 0);
@@ -128,6 +138,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -171,58 +182,385 @@
     }
   }
   
-  /* Catalog theme - dark background */
-  .catalog-theme {
-    background-color: var(--catalog-bg);
-    color: var(--catalog-text);
+  /* ============================================
+     CATALOG PAGE - PIXEL PERFECT STYLES
+     ============================================ */
+  
+  /* Main catalog page with background */
+  .catalog-page {
     min-height: 100vh;
+    position: relative;
+    background-color: var(--catalog-bg);
   }
   
-  .catalog-card {
-    background-color: var(--catalog-card);
-    border-radius: var(--radius);
+  .catalog-page::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('/container-terminal-bg.jpg');
+    background-size: cover;
+    background-position: center top;
+    background-repeat: no-repeat;
+    opacity: 0.5;
+    z-index: 0;
+    pointer-events: none;
   }
   
-  /* Price styling */
-  .price-text {
-    color: var(--catalog-price);
+  .catalog-page > * {
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Header styles - exact match */
+  .catalog-header {
+    height: 80px;
+    display: flex;
+    align-items: center;
+    background: transparent;
+  }
+  
+  .catalog-logo-text {
+    font-family: "Noto Sans SC", sans-serif;
+    font-size: 40px;
+    font-weight: 400;
+    color: #fff;
+    letter-spacing: normal;
+    line-height: 1;
+  }
+  
+  .catalog-logo-text-bold {
+    font-family: "Noto Sans SC", sans-serif;
+    font-size: 40px;
     font-weight: 700;
+    color: #fff;
   }
   
-  /* Status badges */
-  .badge-new {
-    background-color: var(--success);
-    color: var(--success-foreground);
-    padding: 0.25rem 0.75rem;
+  .catalog-logo-365 {
+    font-family: "Noto Sans SC", sans-serif;
+    font-size: 20.8px;
+    font-weight: 700;
+    color: rgb(255, 140, 50);
+    vertical-align: super;
+    margin-left: 4px;
+  }
+  
+  .catalog-contact {
+    font-family: "Noto Sans SC", sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    color: rgb(200, 200, 200);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+  
+  .catalog-contact:hover {
+    color: #fff;
+  }
+  
+  .catalog-whatsapp:hover {
+    color: #25d366;
+  }
+  
+  /* Filter buttons - exact match */
+  .catalog-filter-btn {
+    background: linear-gradient(135deg, var(--catalog-filter-gradient-from), var(--catalog-filter-gradient-to));
+    border: 1px solid var(--catalog-border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: oklch(0.929 0.013 255.508);
+    font-size: 16px;
+    font-weight: 500;
+    height: 42px;
+    min-width: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    transition: all 0.2s ease;
+  }
+  
+  .catalog-filter-btn:hover {
+    border-color: rgba(100, 116, 139, 0.5);
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.55));
+  }
+  
+  .catalog-filter-btn:focus {
+    outline: none;
+    border-color: var(--catalog-orange);
+    box-shadow: 0 0 0 2px rgba(var(--catalog-orange-rgb), 0.2);
+  }
+  
+  /* Search input - exact match */
+  .catalog-search {
+    background: linear-gradient(135deg, var(--catalog-filter-gradient-from), var(--catalog-filter-gradient-to));
+    border: 1px solid var(--catalog-border);
+    border-radius: 8px;
+    padding: 4px 12px 4px 40px;
+    color: oklch(0.929 0.013 255.508);
+    font-size: 14px;
+    height: 36px;
+    width: 256px;
+    transition: all 0.2s ease;
+  }
+  
+  .catalog-search::placeholder {
+    color: rgba(148, 163, 184, 0.6);
+  }
+  
+  .catalog-search:focus {
+    outline: none;
+    border-color: var(--catalog-orange);
+    box-shadow: 0 0 0 2px rgba(var(--catalog-orange-rgb), 0.2);
+  }
+  
+  /* Container card - exact match with hover effects */
+  .catalog-card {
+    background: linear-gradient(to right bottom, var(--catalog-card-gradient-from) 0%, var(--catalog-card-gradient-to) 100%);
+    border: 1px solid var(--catalog-border-light);
+    border-radius: 10.4px;
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  
+  .catalog-card:hover {
+    box-shadow: 
+      0 0 25px rgba(201, 122, 58, 0.6),
+      0 0 50px rgba(201, 122, 58, 0.4),
+      0 0 80px rgba(201, 122, 58, 0.25),
+      inset 0 0 40px rgba(201, 122, 58, 0.15);
+  }
+  
+  /* Card image with zoom effect */
+  .catalog-card-image {
+    height: 160px;
+    width: 100%;
+    object-fit: cover;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .catalog-card:hover .catalog-card-image {
+    transform: scale(1.05);
+  }
+  
+  /* Badge styles - exact match */
+  .catalog-badge {
+    background: rgba(51, 65, 85, 0.8);
     border-radius: 9999px;
-    font-size: 0.75rem;
+    padding: 4px 12px;
+    font-size: 12px;
     font-weight: 600;
+    color: oklch(0.968 0.007 247.896);
+    position: absolute;
+    top: 12px;
+    right: 12px;
   }
   
-  .badge-used {
-    background-color: oklch(0.45 0.01 260);
-    color: oklch(0.95 0 0);
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 600;
+  .catalog-badge-new {
+    background: #22c55e;
+    color: #fff;
   }
   
-  /* Photo gallery thumbnail */
-  .thumbnail-active {
-    border: 2px solid var(--catalog-price);
+  /* Card title - exact match */
+  .catalog-card-title {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+  
+  /* Price styling - exact match */
+  .catalog-price {
+    font-family: "Noto Sans SC", sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: rgb(255, 140, 50);
+  }
+  
+  /* View button - exact match with hover effects */
+  .catalog-button {
+    color: #fff;
+    background: #515a7a;
+    border: none;
+    border-radius: 10px;
+    padding: 0;
+    font-weight: 600;
+    font-size: 16px;
+    height: 48px;
+    width: 160px;
+    transition: all 0.2s ease;
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.12), 0 6px 16px rgba(0, 0, 0, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .catalog-button:hover {
+    background: #c97a3a;
+    box-shadow: 
+      inset 0 1px rgba(255, 255, 255, 0.12),
+      0 0 15px rgba(201, 122, 58, 0.4),
+      0 0 30px rgba(201, 122, 58, 0.2),
+      0 6px 16px rgba(201, 122, 58, 0.2);
+  }
+  
+  .catalog-button:active {
+    transform: scale(0.98);
+  }
+  
+  /* Info labels */
+  .catalog-label {
+    font-size: 12px;
+    color: rgba(148, 163, 184, 0.8);
+    margin-bottom: 2px;
+  }
+  
+  .catalog-value {
+    font-size: 14px;
+    color: #fff;
+  }
+  
+  /* Found count text */
+  .catalog-found {
+    font-size: 14px;
+    color: rgba(148, 163, 184, 0.8);
+  }
+  
+  .catalog-found-count {
+    color: #fff;
+    font-weight: 500;
+  }
+  
+  /* ============================================
+     DETAIL PAGE STYLES
+     ============================================ */
+  
+  .detail-page {
+    min-height: 100vh;
+    position: relative;
+    background-color: var(--catalog-bg);
+  }
+  
+  .detail-page::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('/container-terminal-bg.jpg');
+    background-size: cover;
+    background-position: center top;
+    background-repeat: no-repeat;
+    opacity: 0.5;
+    z-index: 0;
+    pointer-events: none;
+  }
+  
+  .detail-page > * {
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Gallery styles */
+  .gallery-main-image {
+    width: 100%;
+    height: 400px;
+    object-fit: contain;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+  }
+  
+  .gallery-thumbnail {
+    width: 80px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 6px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+  }
+  
+  .gallery-thumbnail:hover {
+    opacity: 0.9;
+  }
+  
+  .gallery-thumbnail-active {
+    opacity: 1;
+    border-color: var(--catalog-orange);
+  }
+  
+  /* Detail info card */
+  .detail-info-card {
+    background: linear-gradient(to right bottom, var(--catalog-card-gradient-from) 0%, var(--catalog-card-gradient-to) 100%);
+    border: 1px solid var(--catalog-border-light);
+    border-radius: 10px;
+    padding: 24px;
+  }
+  
+  .detail-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 16px;
+  }
+  
+  .detail-price {
+    font-size: 32px;
+    font-weight: 700;
+    color: rgb(255, 140, 50);
+    margin-bottom: 24px;
+  }
+  
+  .detail-spec-label {
+    font-size: 14px;
+    color: rgba(148, 163, 184, 0.8);
+    margin-bottom: 4px;
+  }
+  
+  .detail-spec-value {
+    font-size: 16px;
+    color: #fff;
+    font-weight: 500;
   }
   
   /* WhatsApp button */
-  .whatsapp-btn {
-    border: 2px solid var(--success);
-    color: var(--success);
+  .whatsapp-button {
     background: transparent;
-    transition: all 0.2s ease-in-out;
+    border: 2px solid #25d366;
+    color: #25d366;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 16px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
   }
   
-  .whatsapp-btn:hover {
-    background: var(--success);
-    color: var(--success-foreground);
+  .whatsapp-button:hover {
+    background: #25d366;
+    color: #fff;
+  }
+  
+  /* Back button */
+  .back-button {
+    color: rgba(200, 200, 200, 0.8);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s ease;
+  }
+  
+  .back-button:hover {
+    color: #fff;
   }
 }

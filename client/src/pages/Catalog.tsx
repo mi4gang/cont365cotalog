@@ -2,20 +2,14 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import CatalogHeader from "@/components/CatalogHeader";
 import ContainerCard from "@/components/ContainerCard";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, ChevronDown } from "lucide-react";
 
 export default function Catalog() {
   const [sizeFilter, setSizeFilter] = useState<string>("all");
   const [conditionFilter, setConditionFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
+  const [conditionDropdownOpen, setConditionDropdownOpen] = useState(false);
 
   const { data: containers, isLoading } = trpc.containers.list.useQuery({
     size: sizeFilter !== "all" ? sizeFilter : undefined,
@@ -25,60 +19,143 @@ export default function Catalog() {
 
   const { data: sizes } = trpc.containers.getSizes.useQuery();
 
+  const getSizeLabel = () => {
+    if (sizeFilter === "all") return "Размер";
+    return sizeFilter;
+  };
+
+  const getConditionLabel = () => {
+    if (conditionFilter === "all") return "Состояние";
+    if (conditionFilter === "new") return "Новый";
+    return "Б/У";
+  };
+
   return (
-    <div className="catalog-theme">
+    <div className="catalog-page">
       <CatalogHeader />
 
       <main className="container py-6">
-        {/* Filters */}
+        {/* Filters - exact match from original */}
         <div className="flex flex-wrap items-center gap-4 mb-6">
-          <Select value={sizeFilter} onValueChange={setSizeFilter}>
-            <SelectTrigger className="w-[140px] bg-transparent border-white/20 text-white">
-              <SelectValue placeholder="Размер" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Все размеры</SelectItem>
-              {sizes?.map((size) => (
-                <SelectItem key={size} value={size}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Size Filter Dropdown */}
+          <div className="relative">
+            <button
+              className="catalog-filter-btn"
+              onClick={() => {
+                setSizeDropdownOpen(!sizeDropdownOpen);
+                setConditionDropdownOpen(false);
+              }}
+            >
+              <span>{getSizeLabel()}</span>
+              <ChevronDown className="w-4 h-4 opacity-60" />
+            </button>
+            {sizeDropdownOpen && (
+              <div className="absolute top-full left-0 mt-1 w-48 bg-slate-800/95 backdrop-blur-sm border border-slate-600/30 rounded-lg shadow-xl z-50 overflow-hidden">
+                <button
+                  className="w-full px-4 py-2 text-left text-sm text-slate-200 hover:bg-slate-700/50 transition-colors"
+                  onClick={() => {
+                    setSizeFilter("all");
+                    setSizeDropdownOpen(false);
+                  }}
+                >
+                  Все размеры
+                </button>
+                {sizes?.map((size) => (
+                  <button
+                    key={size}
+                    className="w-full px-4 py-2 text-left text-sm text-slate-200 hover:bg-slate-700/50 transition-colors"
+                    onClick={() => {
+                      setSizeFilter(size);
+                      setSizeDropdownOpen(false);
+                    }}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-          <Select value={conditionFilter} onValueChange={setConditionFilter}>
-            <SelectTrigger className="w-[140px] bg-transparent border-white/20 text-white">
-              <SelectValue placeholder="Состояние" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Все</SelectItem>
-              <SelectItem value="new">Новый</SelectItem>
-              <SelectItem value="used">Б/У</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Condition Filter Dropdown */}
+          <div className="relative">
+            <button
+              className="catalog-filter-btn"
+              onClick={() => {
+                setConditionDropdownOpen(!conditionDropdownOpen);
+                setSizeDropdownOpen(false);
+              }}
+            >
+              <span>{getConditionLabel()}</span>
+              <ChevronDown className="w-4 h-4 opacity-60" />
+            </button>
+            {conditionDropdownOpen && (
+              <div className="absolute top-full left-0 mt-1 w-40 bg-slate-800/95 backdrop-blur-sm border border-slate-600/30 rounded-lg shadow-xl z-50 overflow-hidden">
+                <button
+                  className="w-full px-4 py-2 text-left text-sm text-slate-200 hover:bg-slate-700/50 transition-colors"
+                  onClick={() => {
+                    setConditionFilter("all");
+                    setConditionDropdownOpen(false);
+                  }}
+                >
+                  Все
+                </button>
+                <button
+                  className="w-full px-4 py-2 text-left text-sm text-slate-200 hover:bg-slate-700/50 transition-colors"
+                  onClick={() => {
+                    setConditionFilter("new");
+                    setConditionDropdownOpen(false);
+                  }}
+                >
+                  Новый
+                </button>
+                <button
+                  className="w-full px-4 py-2 text-left text-sm text-slate-200 hover:bg-slate-700/50 transition-colors"
+                  onClick={() => {
+                    setConditionFilter("used");
+                    setConditionDropdownOpen(false);
+                  }}
+                >
+                  Б/У
+                </button>
+              </div>
+            )}
+          </div>
 
-          <div className="text-white/60 text-sm">
-            Найдено: <span className="text-white font-medium">{containers?.length || 0}</span>
+          {/* Found count */}
+          <div className="catalog-found">
+            Найдено: <span className="catalog-found-count">{containers?.length || 0}</span>
           </div>
 
           <div className="flex-1" />
 
+          {/* Search input - exact match */}
           <div className="relative w-full sm:w-auto">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-            <Input
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400/60" />
+            <input
               type="text"
               placeholder="Поиск..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-full sm:w-[200px] bg-transparent border-white/20 text-white placeholder:text-white/40"
+              className="catalog-search"
             />
           </div>
         </div>
 
+        {/* Click outside to close dropdowns */}
+        {(sizeDropdownOpen || conditionDropdownOpen) && (
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => {
+              setSizeDropdownOpen(false);
+              setConditionDropdownOpen(false);
+            }}
+          />
+        )}
+
         {/* Container Grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
           </div>
         ) : containers && containers.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -97,8 +174,8 @@ export default function Catalog() {
           </div>
         ) : (
           <div className="text-center py-20">
-            <div className="text-white/60 text-lg">Контейнеры не найдены</div>
-            <p className="text-white/40 mt-2">Попробуйте изменить параметры поиска</p>
+            <div className="text-slate-400 text-lg">Контейнеры не найдены</div>
+            <p className="text-slate-500 mt-2">Попробуйте изменить параметры поиска</p>
           </div>
         )}
       </main>

@@ -1,5 +1,4 @@
 import { Link } from "wouter";
-import { Phone, MessageCircle } from "lucide-react";
 
 interface CatalogHeaderProps {
   showBackButton?: boolean;
@@ -8,45 +7,39 @@ interface CatalogHeaderProps {
 
 export default function CatalogHeader({ showBackButton, backUrl = "/catalog" }: CatalogHeaderProps) {
   return (
-    <header className="sticky top-0 z-50 bg-[var(--catalog-bg)] border-b border-white/10">
-      <div className="container py-4">
+    <header className="catalog-header">
+      <div className="container">
         <div className="flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="w-10 h-10 flex items-center justify-center">
-              <svg viewBox="0 0 40 40" fill="none" className="w-full h-full">
-                <rect x="2" y="8" width="36" height="24" rx="2" stroke="currentColor" strokeWidth="2" className="text-blue-500"/>
-                <line x1="8" y1="8" x2="8" y2="32" stroke="currentColor" strokeWidth="2" className="text-blue-500"/>
-                <line x1="14" y1="8" x2="14" y2="32" stroke="currentColor" strokeWidth="2" className="text-blue-500"/>
-                <line x1="20" y1="8" x2="20" y2="32" stroke="currentColor" strokeWidth="2" className="text-blue-500"/>
-                <line x1="26" y1="8" x2="26" y2="32" stroke="currentColor" strokeWidth="2" className="text-blue-500"/>
-                <line x1="32" y1="8" x2="32" y2="32" stroke="currentColor" strokeWidth="2" className="text-blue-500"/>
-              </svg>
-            </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-xl font-bold text-white">Каталог</span>
-              <span className="text-xl font-bold text-blue-500">контейнеров</span>
-              <span className="text-xl font-bold text-[var(--catalog-price)]">365</span>
+          {/* Logo - exact match from original */}
+          <Link href="/catalog" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              className="h-14 w-auto"
+              style={{ width: '84px', height: '56px' }}
+            />
+            <div className="flex items-baseline">
+              <span className="catalog-logo-text">Каталог</span>
+              <span className="catalog-logo-text-bold ml-2">контейнеров</span>
+              <span className="catalog-logo-365">365</span>
             </div>
           </Link>
 
-          {/* Contact Info */}
-          <div className="flex items-center gap-4">
+          {/* Contact Info - exact match from original */}
+          <div className="flex items-center gap-6">
             <a 
               href="tel:+79999999999" 
-              className="flex items-center gap-2 text-white/80 hover:text-white transition-colors"
+              className="catalog-contact hidden sm:block"
             >
-              <Phone className="w-4 h-4" />
-              <span className="hidden sm:inline">+7 (999) 999-99-99</span>
+              +7 (999) 999-99-99
             </a>
             <a 
               href="https://wa.me/79999999999" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-white/80 hover:text-white transition-colors"
+              className="catalog-contact catalog-whatsapp hidden sm:block"
             >
-              <MessageCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">WhatsApp</span>
+              WhatsApp
             </a>
           </div>
         </div>
