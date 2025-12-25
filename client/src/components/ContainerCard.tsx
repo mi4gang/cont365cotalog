@@ -45,7 +45,11 @@ export default function ContainerCard({
     <Link href={`/container/${id}`}>
       <div 
         className="catalog-card group cursor-pointer rounded-xl overflow-hidden"
-        style={{ background: cardGradient }}
+        style={{ 
+          background: cardGradient,
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)'
+        }}
       >
         {/* Photo Section with zoom effect */}
         <div className="relative h-32 sm:h-40 overflow-hidden flex-shrink-0">

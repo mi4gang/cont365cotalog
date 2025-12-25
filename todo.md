@@ -125,3 +125,21 @@
 - [x] Fix price color from orange to WHITE
 - [x] Fix WhatsApp button from green to dark blue (#515a7a)
 - [x] Fix "Назад в каталог" from yellow to light grayish-blue
+
+
+## Visual Refinements - Catalog Page (COMPLETED)
+- [x] WhatsApp hover - make more visible (not solid color, but more noticeable)
+- [x] Container cards - increase blur, decrease transparency for better contrast
+- [x] Filter dropdowns - increase blur, decrease transparency for better contrast
+- [x] "Смотреть" button hover - copy exact color from reference (#c97a3a)
+- [x] Search/filter focus border - same color as "Смотреть" button hover (#c97a3a)
+
+## Visual Refinements - Container Detail Page (COMPLETED)
+- [x] Add background block (same as catalog page)
+- [x] Characteristics block - style like cards (blur + gradient)
+- [x] Make characteristics block narrower, photo block wider (2:1 ratio)
+- [x] WhatsApp button - remove icon, hover same as "Смотреть"
+- [x] Badge Б/У/Новый - move inside characteristics block (not floating)
+- [x] Mini photo previews - make non-transparent
+- [x] Photo selection border - same color as search focus border (#c97a3a)
+- [x] Add fullscreen photo viewer on click
