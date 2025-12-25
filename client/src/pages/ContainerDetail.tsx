@@ -71,8 +71,8 @@ export default function ContainerDetail() {
       <CatalogHeader />
 
       <main className="container py-6">
-        {/* Back Button - Yellow text like original */}
-        <Link href="/catalog" className="inline-flex items-center gap-2 text-yellow-400 hover:text-yellow-300 transition-colors mb-6">
+        {/* Back Button - Light grayish-blue text like original */}
+        <Link href="/catalog" className="inline-flex items-center gap-2 transition-colors mb-6" style={{ color: 'oklch(0.869 0.022 252.894)' }}>
           <ChevronLeft className="w-5 h-5" />
           <span>Назад в каталог</span>
         </Link>
@@ -188,7 +188,7 @@ export default function ContainerDetail() {
               {/* Price Block - Dark background like original */}
               <div className="bg-slate-900/60 rounded-lg p-4 mb-6">
                 <p className="text-slate-400 text-sm mb-1">Цена</p>
-                <p className="text-2xl font-bold" style={{ color: 'rgb(255, 140, 50)' }}>
+                <p className="text-2xl sm:text-3xl font-bold text-white">
                   {formatPrice(container.price)}
                 </p>
               </div>
@@ -198,7 +198,7 @@ export default function ContainerDetail() {
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium bg-[#25d366] text-white hover:bg-[#20bd5a] transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white transition-colors catalog-button"
               >
                 <MessageCircle className="w-5 h-5" />
                 Заказать через WhatsApp

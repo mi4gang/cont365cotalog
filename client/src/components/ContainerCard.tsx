@@ -27,11 +27,28 @@ export default function ContainerCard({
     return formatted + " ₽";
   };
 
+  // Card background gradients from reference site
+  // Б/У (used): gray-blue gradient
+  // Новый (new): darker blue gradient
+  const cardGradient = condition === "new" 
+    ? "linear-gradient(to right bottom, oklab(0.279 -0.00709772 -0.040381 / 0.75) 0%, oklab(0.379 -0.0113991 -0.145554 / 0.65) 100%)"
+    : "linear-gradient(to right bottom, oklab(0.372 -0.00968297 -0.0429213 / 0.75) 0%, oklab(0.279 -0.00709772 -0.040381 / 0.65) 100%)";
+
+  // Badge colors from reference site
+  // Новый: brighter blue oklab(0.511 0.0317755 -0.260066 / 0.9)
+  // Б/У: grayish blue oklab(0.372 -0.00968297 -0.0429213 / 0.8)
+  const badgeStyle = condition === "new"
+    ? { background: "oklab(0.511 0.0317755 -0.260066 / 0.9)" }
+    : { background: "oklab(0.372 -0.00968297 -0.0429213 / 0.8)" };
+
   return (
     <Link href={`/container/${id}`}>
-      <div className="catalog-card group cursor-pointer">
+      <div 
+        className="catalog-card group cursor-pointer rounded-xl overflow-hidden"
+        style={{ background: cardGradient }}
+      >
         {/* Photo Section with zoom effect */}
-        <div className="relative h-32 sm:h-40 bg-slate-700 overflow-hidden flex-shrink-0">
+        <div className="relative h-32 sm:h-40 overflow-hidden flex-shrink-0">
           {mainPhoto ? (
             <img
               src={mainPhoto}
@@ -46,16 +63,20 @@ export default function ContainerCard({
             </div>
           )}
           
-          {/* Status Badge - BLUE for "Новый", gray for "Б/У" */}
-          <div className={`absolute top-3 right-3 text-slate-100 text-xs font-semibold px-3 py-1 rounded-full ${
-            condition === "new" ? "bg-blue-500/90" : "bg-slate-700/80"
-          }`}>
+          {/* Status Badge - exact colors from reference */}
+          <div 
+            className="absolute top-3 right-3 text-xs font-semibold px-3 py-1 rounded-full"
+            style={{ 
+              ...badgeStyle,
+              color: "oklch(0.968 0.007 247.896)"
+            }}
+          >
             {condition === "new" ? "Новый" : "Б/У"}
           </div>
         </div>
 
         {/* Info Section - matching original structure */}
-        <div className="flex-1 p-3 sm:p-4 bg-slate-900/5 backdrop-blur-sm flex flex-col justify-between">
+        <div className="flex-1 p-3 sm:p-4 flex flex-col justify-between">
           <h3 className="text-white font-bold text-base sm:text-lg line-clamp-1 mb-2 sm:mb-3">{name}</h3>
           
           <div className="flex justify-between mb-2 sm:mb-3 text-xs sm:text-sm">

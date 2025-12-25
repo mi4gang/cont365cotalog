@@ -8,21 +8,22 @@ interface CatalogHeaderProps {
 export default function CatalogHeader({ showBackButton, backUrl = "/catalog" }: CatalogHeaderProps) {
   return (
     <header className="sticky top-0 z-50 bg-transparent" style={{ height: '80px' }}>
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-3 sm:gap-0 sm:h-20">
-        {/* Logo - exact match from reference: 83.67px x 56px */}
-        <div className="flex items-end" style={{ gap: '0' }}>
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 sm:h-20">
+        {/* Logo and Title - aligned to center vertically */}
+        <div className="flex items-center" style={{ gap: '0' }}>
+          {/* Logo: 83.67px x 56px from reference */}
           <img 
             src="/logo.png" 
             alt="Logo" 
             style={{ width: '83.67px', height: '56px' }}
           />
-          {/* Title container - exact spacing from reference */}
-          <div className="flex items-end" style={{ marginLeft: '4.8px' }}>
+          {/* Title container - text aligned to center of logo */}
+          <div className="flex items-baseline" style={{ marginLeft: '12.8px' }}>
             <span 
               className="text-white"
               style={{ 
                 fontSize: '40px', 
-                lineHeight: '40px', 
+                lineHeight: '1', 
                 fontWeight: 400, 
                 fontFamily: '"Noto Sans SC", sans-serif',
                 letterSpacing: '-0.5px'
@@ -34,26 +35,24 @@ export default function CatalogHeader({ showBackButton, backUrl = "/catalog" }: 
               className="text-white"
               style={{ 
                 fontSize: '40px', 
-                lineHeight: '40px', 
+                lineHeight: '1', 
                 fontWeight: 700, 
-                marginLeft: '3.2px',
+                marginLeft: '8px',
                 fontFamily: '"Noto Sans SC", sans-serif',
                 letterSpacing: '-0.5px'
               }}
             >
               контейнеров
             </span>
-            {/* 365 - aligned to bottom of "контейнеров" baseline */}
+            {/* 365 - aligned to baseline of "контейнеров" */}
             <span 
               style={{ 
                 fontSize: '20.8px', 
-                lineHeight: '20.8px', 
+                lineHeight: '1', 
                 fontWeight: 700,
                 color: 'rgb(255, 140, 50)', 
-                marginLeft: '0.8px',
-                fontFamily: '"Noto Sans SC", sans-serif',
-                alignSelf: 'flex-end',
-                marginBottom: '0px'
+                marginLeft: '5.6px',
+                fontFamily: '"Noto Sans SC", sans-serif'
               }}
             >
               365

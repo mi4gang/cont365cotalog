@@ -109,3 +109,19 @@
 - [x] Extract and apply exact spacing between "Каталог" and "контейнеров" (3.2px)
 - [x] Extract and apply exact spacing between "контейнеров" and "365" (0.8px)
 - [x] Align "365" baseline with bottom of "контейнеров" letters (bottom=68px matches)
+
+
+## Header and Card Color Fixes (COMPLETED)
+- [x] Raise header text to align with logo center (not bottom)
+- [x] Fix spacing proportions: logo-Каталог=x, Каталог-контейнеров=0.75x, контейнеров-365=0.5x
+- [x] Extract exact card background color for "Новый" containers (darker blue)
+- [x] Extract exact card background color for "Б/У" containers (grayer)
+- [x] Extract exact badge color for "Новый" label
+- [x] Extract exact badge color for "Б/У" label
+- [x] Apply all extracted colors to current site
+
+
+## Detail Page Fixes (COMPLETED)
+- [x] Fix price color from orange to WHITE
+- [x] Fix WhatsApp button from green to dark blue (#515a7a)
+- [x] Fix "Назад в каталог" from yellow to light grayish-blue

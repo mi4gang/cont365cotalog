@@ -324,7 +324,7 @@
      CONTAINER CARDS - EXACT MATCH
      ============================================ */
   .catalog-card {
-    background: linear-gradient(to right bottom, rgba(51, 65, 85, 0.75) 0%, rgba(30, 58, 138, 0.65) 100%);
+    /* Background gradient is set inline based on condition (new/used) */
     border: 1px solid rgba(100, 116, 139, 0.2);
     border-radius: 12px;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
