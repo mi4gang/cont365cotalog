@@ -101,3 +101,11 @@
 - [x] Fix WhatsApp hover - minimal effect matching reference
 - [x] Match exact header height and vertical alignment (80px)
 - [x] Match exact colors for all text elements
+
+
+## Header Fine-Tuning (COMPLETED)
+- [x] Fix WhatsApp hover - subtle white text with green text-shadow
+- [x] Extract and apply exact spacing between logo and "Каталог" (4.8px)
+- [x] Extract and apply exact spacing between "Каталог" and "контейнеров" (3.2px)
+- [x] Extract and apply exact spacing between "контейнеров" and "365" (0.8px)
+- [x] Align "365" baseline with bottom of "контейнеров" letters (bottom=68px matches)
