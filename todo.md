@@ -70,3 +70,21 @@
 - [x] Recreate container detail page with identical gallery
 - [x] Recreate all hover/focus/active states
 - [x] Final visual comparison with original
+
+
+## Visual Fixes Based on User Feedback (COMPLETED)
+- [x] Fix header font: "Каталог контейнеров" white normal, "365" orange superscript
+- [x] Fix phone/WhatsApp font styling to match reference (16px)
+- [x] WhatsApp hover: green rectangle background
+- [x] Add glassmorphism container block for entire catalog area
+- [x] Fix filter dropdowns: wider width (192px) matching reference
+- [x] Fix filter dropdowns: orange highlight for selected item
+- [x] Fix filter dropdowns: orange highlight on hover
+- [x] Fix filter dropdowns: auto-close on selection
+- [x] Fix search input: wider (256px) with orange focus ring
+- [x] Fix card background: blue gradient (matte glass)
+- [x] Fix card width: matching reference dimensions
+- [x] Fix badge colors: blue for both "Новый" and "Б/У"
+- [x] Fix price color: white
+- [x] Fix card fonts: match sizes and weights from reference
+- [x] Verify all hover effects match reference
