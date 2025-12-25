@@ -143,3 +143,27 @@
 - [x] Mini photo previews - make non-transparent
 - [x] Photo selection border - same color as search focus border (#c97a3a)
 - [x] Add fullscreen photo viewer on click
+
+
+## UI Fixes - Filters, Cards, Mobile (COMPLETED)
+
+### Catalog Page - Filters & Search
+- [x] Unify font size/weight for filter buttons (Размер, Состояние)
+- [x] Make search input font slightly smaller but consistent style
+- [x] Lighten filter/search block backgrounds (match reference - more transparent)
+
+### Catalog Page - Cards
+- [x] Extend card inner block to include "Контейнер #X" title and ID text
+- [x] Fix Б/У badge color - make more visible/contrasting on card background
+
+### Container Detail Page
+- [x] Extend glassmorphism block to include title "Контейнер #X" and ID
+- [x] Increase photo gallery height (make photos bigger)
+- [x] Fix Б/У badge in characteristics - make visible against block background
+
+### Mobile Responsiveness
+- [x] Fix header - should not be sticky/fixed causing layout issues
+- [x] Adapt catalog page for mobile screens
+- [x] Adapt container detail page for mobile screens
+- [x] Add swipe gesture support for photo gallery (touch events)
+- [x] Add swipe support for fullscreen photo viewer

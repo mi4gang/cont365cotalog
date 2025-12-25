@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, TouchEvent } from "react";
 import { useParams, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import CatalogHeader from "@/components/CatalogHeader";
@@ -9,11 +9,38 @@ export default function ContainerDetail() {
   const containerId = parseInt(params.id || "0", 10);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  // Touch swipe support
+  const touchStartX = useRef<number>(0);
+  const touchEndX = useRef<number>(0);
 
   const { data: container, isLoading, error } = trpc.containers.getById.useQuery(
     { id: containerId },
     { enabled: containerId > 0 }
   );
+
+  const handleTouchStart = (e: TouchEvent) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    const diff = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 50;
+    
+    if (Math.abs(diff) > minSwipeDistance) {
+      if (diff > 0) {
+        // Swipe left - next photo
+        nextPhoto();
+      } else {
+        // Swipe right - prev photo
+        prevPhoto();
+      }
+    }
+  };
 
   if (isLoading) {
     return (
@@ -66,10 +93,10 @@ export default function ContainerDetail() {
   );
   const whatsappUrl = `https://wa.me/79999999999?text=${whatsappMessage}`;
 
-  // Badge style matching catalog cards
+  // Badge style - more contrasting for visibility on dark background
   const badgeStyle = container.condition === "new"
-    ? { background: "oklab(0.511 0.0317755 -0.260066 / 0.9)" }
-    : { background: "oklab(0.372 -0.00968297 -0.0429213 / 0.8)" };
+    ? { background: "rgba(59, 130, 246, 0.9)" } // Brighter blue
+    : { background: "rgba(120, 130, 150, 0.95)" }; // Lighter gray for better contrast
 
   // Card gradient matching catalog cards
   const cardGradient = container.condition === "new" 
@@ -80,48 +107,53 @@ export default function ContainerDetail() {
     <div className="detail-page">
       <CatalogHeader />
 
-      {/* Main content area with glassmorphism background like catalog */}
-      <main className="container py-6">
+      {/* Main content area */}
+      <main className="container py-4 sm:py-6">
         {/* Back Button */}
-        <Link href="/catalog" className="inline-flex items-center gap-2 transition-colors mb-6" style={{ color: 'oklch(0.869 0.022 252.894)' }}>
+        <Link href="/catalog" className="inline-flex items-center gap-2 transition-colors mb-4 sm:mb-6" style={{ color: 'oklch(0.869 0.022 252.894)' }}>
           <ChevronLeft className="w-5 h-5" />
           <span>Назад в каталог</span>
         </Link>
 
-        {/* Title and ID */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-white mb-1">{container.name}</h1>
-          <p className="text-slate-400">ID: {container.externalId}</p>
-        </div>
-
-        {/* Glassmorphism container like catalog page */}
+        {/* Glassmorphism container - includes title and ID */}
         <div 
-          className="rounded-2xl p-6"
+          className="rounded-2xl p-4 sm:p-6"
           style={{
-            background: 'rgba(30, 41, 59, 0.25)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            border: '1px solid rgba(148, 163, 184, 0.15)'
+            background: 'rgba(20, 30, 50, 0.6)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            border: '1px solid rgba(148, 163, 184, 0.25)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
           }}
         >
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Title and ID - INSIDE the glassmorphism block */}
+          <div className="mb-4 sm:mb-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">{container.name}</h1>
+            <p className="text-slate-400 text-sm sm:text-base">ID: {container.externalId}</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Photo Gallery - Left Column (wider) */}
             <div className="lg:col-span-2">
-              {/* Main Photo - clickable for fullscreen */}
+              {/* Main Photo - taller, clickable for fullscreen, swipeable */}
               <div 
-                className="relative rounded-xl overflow-hidden mb-4 cursor-pointer" 
+                className="relative rounded-xl overflow-hidden mb-3 sm:mb-4 cursor-pointer" 
                 style={{ 
-                  height: '400px',
+                  height: 'clamp(300px, 50vh, 500px)',
                   background: 'rgba(0, 0, 0, 0.3)',
                   backdropFilter: 'blur(8px)'
                 }}
                 onClick={() => photos.length > 0 && setIsFullscreen(true)}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
               >
                 {currentPhoto ? (
                   <img
                     src={currentPhoto.url}
                     alt={`${container.name} - фото ${currentPhotoIndex + 1}`}
                     className="w-full h-full object-contain"
+                    draggable={false}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -131,18 +163,18 @@ export default function ContainerDetail() {
                   </div>
                 )}
 
-                {/* Navigation Arrows */}
+                {/* Navigation Arrows - hidden on mobile (use swipe) */}
                 {photos.length > 1 && (
                   <>
                     <button
                       onClick={(e) => { e.stopPropagation(); prevPhoto(); }}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors border border-white/20"
+                      className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 items-center justify-center text-white transition-colors border border-white/20"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); nextPhoto(); }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors border border-white/20"
+                      className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 items-center justify-center text-white transition-colors border border-white/20"
                     >
                       <ChevronRight className="w-5 h-5" />
                     </button>
@@ -151,25 +183,25 @@ export default function ContainerDetail() {
 
                 {/* Photo Counter */}
                 {photos.length > 0 && (
-                  <div className="absolute bottom-4 right-4 bg-black/60 px-3 py-1.5 rounded-lg text-white text-sm font-medium">
+                  <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 bg-black/60 px-3 py-1.5 rounded-lg text-white text-sm font-medium">
                     {currentPhotoIndex + 1} / {photos.length}
                   </div>
                 )}
               </div>
 
-              {/* Thumbnails - non-transparent with muted orange border */}
+              {/* Thumbnails - non-transparent, scrollable on mobile */}
               {photos.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-2">
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   {photos.map((photo, index) => (
                     <button
                       key={photo.id}
                       onClick={() => setCurrentPhotoIndex(index)}
-                      className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden transition-all"
+                      className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden transition-all"
                       style={{
                         border: index === currentPhotoIndex 
                           ? '2px solid rgb(201, 122, 58)' 
-                          : '2px solid transparent',
-                        opacity: index === currentPhotoIndex ? 1 : 0.8
+                          : '2px solid rgba(100, 116, 139, 0.3)',
+                        opacity: 1 // Non-transparent thumbnails
                       }}
                     >
                       <img
@@ -183,10 +215,10 @@ export default function ContainerDetail() {
               )}
             </div>
 
-            {/* Specifications - Right Column (narrower) - styled like catalog cards */}
+            {/* Specifications - Right Column (narrower) */}
             <div className="lg:col-span-1">
               <div 
-                className="rounded-xl p-5"
+                className="rounded-xl p-4 sm:p-5"
                 style={{ 
                   background: cardGradient,
                   backdropFilter: 'blur(12px)',
@@ -195,23 +227,23 @@ export default function ContainerDetail() {
                 }}
               >
                 {/* Title "Характеристики" */}
-                <h2 className="text-xl font-bold text-white mb-5">Характеристики</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-5">Характеристики</h2>
 
                 {/* Specifications */}
-                <div className="space-y-4 mb-5">
+                <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-5">
                   <div>
-                    <p className="text-slate-400 text-sm mb-1">Тип контейнера</p>
-                    <p className="text-white font-medium">{container.size}</p>
+                    <p className="text-slate-400 text-xs sm:text-sm mb-1">Тип контейнера</p>
+                    <p className="text-white font-medium text-sm sm:text-base">{container.size}</p>
                   </div>
 
-                  {/* Badge inside specifications block - not floating */}
+                  {/* Badge inside specifications block - more visible */}
                   <div>
-                    <p className="text-slate-400 text-sm mb-1">Состояние</p>
+                    <p className="text-slate-400 text-xs sm:text-sm mb-1">Состояние</p>
                     <span 
                       className="inline-block text-xs font-semibold px-3 py-1 rounded-full"
                       style={{ 
                         ...badgeStyle,
-                        color: "oklch(0.968 0.007 247.896)"
+                        color: "#fff"
                       }}
                     >
                       {container.condition === "new" ? "Новый" : "Б/У"}
@@ -219,25 +251,25 @@ export default function ContainerDetail() {
                   </div>
 
                   <div>
-                    <p className="text-slate-400 text-sm mb-1">ID контейнера</p>
-                    <p className="text-white font-medium">{container.externalId}</p>
+                    <p className="text-slate-400 text-xs sm:text-sm mb-1">ID контейнера</p>
+                    <p className="text-white font-medium text-sm sm:text-base">{container.externalId}</p>
                   </div>
 
                   {container.description && (
                     <div>
-                      <p className="text-slate-400 text-sm mb-1">Описание</p>
-                      <p className="text-white text-sm leading-relaxed">{container.description}</p>
+                      <p className="text-slate-400 text-xs sm:text-sm mb-1">Описание</p>
+                      <p className="text-white text-xs sm:text-sm leading-relaxed">{container.description}</p>
                     </div>
                   )}
                 </div>
 
                 {/* Price Block - Darker background */}
                 <div 
-                  className="rounded-lg p-4 mb-5"
+                  className="rounded-lg p-3 sm:p-4 mb-4 sm:mb-5"
                   style={{ background: 'rgba(15, 23, 42, 0.6)' }}
                 >
-                  <p className="text-slate-400 text-sm mb-1">Цена</p>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-slate-400 text-xs sm:text-sm mb-1">Цена</p>
+                  <p className="text-xl sm:text-2xl font-bold text-white">
                     {formatPrice(container.price)}
                   </p>
                 </div>
@@ -247,7 +279,7 @@ export default function ContainerDetail() {
                   href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center py-3 px-4 rounded-lg font-semibold text-white transition-all catalog-button"
+                  className="w-full flex items-center justify-center py-3 px-4 rounded-lg font-semibold text-white transition-all catalog-button text-sm sm:text-base"
                 >
                   Заказать через WhatsApp
                 </a>
@@ -257,41 +289,45 @@ export default function ContainerDetail() {
         </div>
       </main>
 
-      {/* Fullscreen Photo Viewer */}
+      {/* Fullscreen Photo Viewer with swipe support */}
       {isFullscreen && photos.length > 0 && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center"
           style={{ background: 'rgba(0, 0, 0, 0.95)' }}
           onClick={() => setIsFullscreen(false)}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           {/* Close button */}
           <button 
-            className="absolute top-4 right-4 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+            className="absolute top-4 right-4 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors z-10"
             onClick={() => setIsFullscreen(false)}
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
 
           {/* Main image */}
           <img
             src={currentPhoto?.url}
             alt={`${container.name} - фото ${currentPhotoIndex + 1}`}
-            className="max-w-[90vw] max-h-[90vh] object-contain"
+            className="max-w-[95vw] max-h-[85vh] sm:max-w-[90vw] sm:max-h-[90vh] object-contain"
             onClick={(e) => e.stopPropagation()}
+            draggable={false}
           />
 
-          {/* Navigation Arrows */}
+          {/* Navigation Arrows - hidden on mobile (use swipe) */}
           {photos.length > 1 && (
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); prevPhoto(); }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 items-center justify-center text-white transition-colors"
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); nextPhoto(); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 items-center justify-center text-white transition-colors"
               >
                 <ChevronRight className="w-6 h-6" />
               </button>
@@ -301,6 +337,11 @@ export default function ContainerDetail() {
           {/* Photo Counter */}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 px-4 py-2 rounded-lg text-white text-sm font-medium">
             {currentPhotoIndex + 1} / {photos.length}
+          </div>
+          
+          {/* Swipe hint for mobile */}
+          <div className="sm:hidden absolute bottom-16 left-1/2 -translate-x-1/2 text-white/50 text-xs">
+            Свайпните для переключения
           </div>
         </div>
       )}

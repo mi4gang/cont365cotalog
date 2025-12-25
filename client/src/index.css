@@ -245,7 +245,7 @@
      FILTER BUTTONS - EXACT MATCH
      ============================================ */
   .catalog-filter-btn {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.65));
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.45));
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--catalog-border);
@@ -265,7 +265,7 @@
   
   .catalog-filter-btn:hover {
     border-color: rgba(100, 116, 139, 0.5);
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.55));
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.55), rgba(15, 23, 42, 0.5));
   }
   
   .catalog-filter-btn:focus {
@@ -307,7 +307,7 @@
   
   /* Search input - exact match */
   .catalog-search {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.65));
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.45));
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--catalog-border);
@@ -594,5 +594,57 @@
   
   .back-button:hover {
     color: #fff;
+  }
+}
+
+
+/* ============================================
+   MOBILE RESPONSIVE STYLES
+   ============================================ */
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile filter button adjustments */
+@media (max-width: 640px) {
+  .catalog-filter-btn {
+    min-width: 0;
+    padding: 6px 10px;
+    height: 38px;
+    font-size: 14px;
+  }
+  
+  .catalog-search {
+    height: 38px;
+    padding-left: 36px;
+    font-size: 14px;
+  }
+  
+  .catalog-glass-container {
+    padding: 12px;
+    border-radius: 12px;
+  }
+  
+  .catalog-filter-dropdown {
+    min-width: 120px;
+  }
+}
+
+/* Touch-friendly tap targets */
+@media (pointer: coarse) {
+  .catalog-filter-option {
+    padding: 12px 16px;
+    min-height: 44px;
+  }
+  
+  button, a {
+    min-height: 44px;
   }
 }
