@@ -88,3 +88,16 @@
 - [x] Fix price color: white
 - [x] Fix card fonts: match sizes and weights from reference
 - [x] Verify all hover effects match reference
+
+
+## Header Pixel-Perfect Fix (COMPLETED)
+- [x] Extract exact font-family, font-size, font-weight for logo text (Noto Sans SC, 40px)
+- [x] Extract exact spacing between logo icon and "Каталог" (4.8px)
+- [x] Extract exact spacing between "Каталог" and "контейнеров" (3.2px)
+- [x] Extract exact spacing between "контейнеров" and "365" (0.8px)
+- [x] Extract exact font styling for phone number (16px, rgb(200,200,200))
+- [x] Extract exact font styling for WhatsApp (16px, rgb(200,200,200))
+- [x] Extract exact spacing between phone and WhatsApp (24px gap)
+- [x] Fix WhatsApp hover - minimal effect matching reference
+- [x] Match exact header height and vertical alignment (80px)
+- [x] Match exact colors for all text elements

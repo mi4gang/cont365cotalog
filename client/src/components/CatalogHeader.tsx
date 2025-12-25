@@ -7,27 +7,72 @@ interface CatalogHeaderProps {
 
 export default function CatalogHeader({ showBackButton, backUrl = "/catalog" }: CatalogHeaderProps) {
   return (
-    <header className="catalog-header">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-3 flex items-center justify-between h-20">
-        {/* Logo - exact match from original */}
-        <Link href="/catalog" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+    <header className="sticky top-0 z-50 bg-transparent" style={{ height: '80px' }}>
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-3 sm:gap-0 sm:h-20">
+        {/* Logo - exact match from reference: 83.67px x 56px */}
+        <div className="flex items-center" style={{ gap: '0' }}>
           <img 
             src="/logo.png" 
             alt="Logo" 
-            className="h-10 sm:h-14 w-auto"
+            style={{ width: '83.67px', height: '56px' }}
           />
-          <div className="flex items-baseline flex-wrap">
-            <span className="catalog-logo-text">Каталог</span>
-            <span className="catalog-logo-text-bold ml-1">контейнеров</span>
-            <span className="catalog-logo-365">365</span>
+          {/* Title container - exact spacing from reference */}
+          <div className="flex items-baseline" style={{ marginLeft: '4.8px' }}>
+            <span 
+              className="text-white"
+              style={{ 
+                fontSize: '40px', 
+                lineHeight: 1, 
+                fontWeight: 400, 
+                fontFamily: '"Noto Sans SC", sans-serif',
+                letterSpacing: '-0.5px'
+              }}
+            >
+              Каталог
+            </span>
+            <span 
+              className="text-white"
+              style={{ 
+                fontSize: '40px', 
+                lineHeight: 1, 
+                fontWeight: 700, 
+                marginLeft: '3.2px',
+                fontFamily: '"Noto Sans SC", sans-serif',
+                letterSpacing: '-0.5px'
+              }}
+            >
+              контейнеров
+            </span>
+            <span 
+              style={{ 
+                fontSize: '20.8px', 
+                lineHeight: 1, 
+                fontWeight: 700,
+                color: 'rgb(255, 140, 50)', 
+                marginLeft: '0.8px',
+                fontFamily: '"Noto Sans SC", sans-serif',
+                verticalAlign: 'super',
+                position: 'relative',
+                top: '-8px'
+              }}
+            >
+              365
+            </span>
           </div>
-        </Link>
+        </div>
 
-        {/* Contact Info - exact match from original */}
-        <div className="flex items-center gap-4 sm:gap-6">
+        {/* Contact Info - exact match from reference */}
+        <div className="flex items-baseline gap-6">
           <a 
             href="tel:+79999999999" 
-            className="catalog-contact hidden sm:block"
+            className="transition-all"
+            style={{ 
+              color: 'rgb(200, 200, 200)',
+              fontFamily: '"Noto Sans SC", sans-serif',
+              fontSize: '16px',
+              fontWeight: 400,
+              textDecoration: 'none'
+            }}
           >
             +7 (999) 999-99-99
           </a>
@@ -35,7 +80,16 @@ export default function CatalogHeader({ showBackButton, backUrl = "/catalog" }: 
             href="https://wa.me/79999999999" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="catalog-contact catalog-whatsapp"
+            className="transition-all catalog-whatsapp-link"
+            style={{ 
+              color: 'rgb(200, 200, 200)',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontFamily: '"Noto Sans SC", sans-serif',
+              fontSize: '16px',
+              fontWeight: 400,
+              transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
           >
             WhatsApp
           </a>

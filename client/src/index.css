@@ -213,68 +213,15 @@
     z-index: 1;
   }
   
-  /* Header styles - exact match */
-  .catalog-header {
-    height: 80px;
-    display: flex;
-    align-items: center;
-    background: transparent;
-  }
-  
-  /* Logo text - "Каталог" normal weight */
-  .catalog-logo-text {
-    font-family: "Noto Sans SC", sans-serif;
-    font-size: 32px;
-    font-weight: 400;
-    color: #fff;
-    letter-spacing: normal;
-    line-height: 1;
-  }
-  
-  /* Logo text - "контейнеров" bold (NOT italic, WHITE color) */
-  .catalog-logo-text-bold {
-    font-family: "Noto Sans SC", sans-serif;
-    font-size: 32px;
-    font-weight: 700;
-    font-style: normal;
-    color: #fff;
-  }
-  
-  /* Logo "365" - orange superscript */
-  .catalog-logo-365 {
-    font-family: "Noto Sans SC", sans-serif;
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--catalog-orange);
-    vertical-align: super;
-    margin-left: 2px;
-  }
-  
-  /* Contact links */
-  .catalog-contact {
-    font-family: "Noto Sans SC", sans-serif;
-    font-size: 16px;
-    font-weight: 400;
-    color: rgb(200, 200, 200);
-    text-decoration: none;
-    transition: all 0.2s ease;
-  }
-  
-  .catalog-contact:hover {
-    color: #fff;
-  }
-  
-  /* WhatsApp with green background on hover */
-  .catalog-whatsapp {
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-  }
-  
-  .catalog-whatsapp:hover {
-    background: #25d366;
-    color: #fff !important;
-  }
+/* WhatsApp link - minimal hover effect matching reference */
+.catalog-whatsapp-link {
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.catalog-whatsapp-link:hover {
+  color: rgb(230, 230, 230);
+}
   
   /* ============================================
      GLASSMORPHISM CONTAINER FOR CATALOG
