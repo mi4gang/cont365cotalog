@@ -14,6 +14,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Loader2,
   Upload,
   Package,
@@ -23,9 +41,14 @@ import {
   XCircle,
   Image as ImageIcon,
   RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  Edit,
+  Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
+import PhotoDragDrop from "@/components/PhotoDragDrop";
 
 interface ParsedContainer {
   externalId: string;
@@ -36,6 +59,23 @@ interface ParsedContainer {
   photoUrls: string[];
 }
 
+interface ContainerWithPhotos {
+  id: number;
+  externalId: string;
+  name: string;
+  size: string;
+  condition: "new" | "used";
+  price: string | null;
+  description: string | null;
+  isActive: boolean;
+  photos?: {
+    id: number;
+    url: string;
+    displayOrder: number;
+    isMain: boolean;
+  }[];
+}
+
 export default function AdminDashboard() {
   const { adminUser, isLoading: authLoading } = useAdminAuth();
   const logoutMutation = useAdminLogout();
@@ -44,6 +84,18 @@ export default function AdminDashboard() {
   const [parsedData, setParsedData] = useState<ParsedContainer[]>([]);
   const [parseError, setParseError] = useState("");
   const [fileName, setFileName] = useState("");
+  
+  // Expanded rows for photo management
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  
+  // Edit dialog state
+  const [editingContainer, setEditingContainer] = useState<ContainerWithPhotos | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editSize, setEditSize] = useState("");
+  const [editCondition, setEditCondition] = useState<"new" | "used">("used");
+  const [editPrice, setEditPrice] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editIsActive, setEditIsActive] = useState(true);
 
   const { data: containers, refetch: refetchContainers } = trpc.adminContainers.list.useQuery();
   const { data: importHistory } = trpc.adminContainers.getImportHistory.useQuery();
@@ -59,6 +111,81 @@ export default function AdminDashboard() {
       toast.error(err.message || "Ошибка импорта");
     },
   });
+
+  const updateMutation = trpc.adminContainers.update.useMutation({
+    onSuccess: () => {
+      toast.success("Контейнер обновлен");
+      setEditingContainer(null);
+      refetchContainers();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Ошибка обновления");
+    },
+  });
+
+  const setMainPhotoMutation = trpc.adminContainers.setMainPhoto.useMutation({
+    onSuccess: () => {
+      toast.success("Главное фото установлено");
+      refetchContainers();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Ошибка");
+    },
+  });
+
+  const reorderPhotosMutation = trpc.adminContainers.reorderPhotos.useMutation({
+    onSuccess: () => {
+      toast.success("Порядок фото обновлен");
+      refetchContainers();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Ошибка");
+    },
+  });
+
+  const toggleRowExpanded = (containerId: number) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(containerId)) {
+        newSet.delete(containerId);
+      } else {
+        newSet.add(containerId);
+      }
+      return newSet;
+    });
+  };
+
+  const openEditDialog = (container: ContainerWithPhotos) => {
+    setEditingContainer(container);
+    setEditName(container.name);
+    setEditSize(container.size);
+    setEditCondition(container.condition);
+    setEditPrice(container.price || "");
+    setEditDescription(container.description || "");
+    setEditIsActive(container.isActive);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingContainer) return;
+    
+    updateMutation.mutate({
+      id: editingContainer.id,
+      name: editName,
+      size: editSize,
+      condition: editCondition,
+      price: editPrice || undefined,
+      description: editDescription || undefined,
+      isActive: editIsActive,
+    });
+  };
+
+  const handleSetMainPhoto = (containerId: number, photoId: number) => {
+    setMainPhotoMutation.mutate({ containerId, photoId });
+  };
+
+  const handleReorderPhotos = (containerId: number, photoIds: number[]) => {
+    reorderPhotosMutation.mutate({ containerId, photoIds });
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -83,14 +210,12 @@ export default function AdminDashboard() {
   };
 
   const parseCSV = (text: string): ParsedContainer[] => {
-    // Remove BOM if present
     const cleanText = text.replace(/^\uFEFF/, "");
     const lines = cleanText.split("\n").filter((line) => line.trim());
     if (lines.length < 2) {
       throw new Error("CSV файл должен содержать заголовок и хотя бы одну строку данных");
     }
 
-    // Parse header to find column indices
     const header = lines[0].split(";").map((h) => h.trim().toLowerCase());
     
     const idIndex = header.findIndex((h) => h.includes("id") || h.includes("ид"));
@@ -98,8 +223,6 @@ export default function AdminDashboard() {
     const sizeIndex = header.findIndex((h) => h.includes("size") || h.includes("размер") || h.includes("тип"));
     const conditionIndex = header.findIndex((h) => h.includes("condition") || h.includes("состояние") || h.includes("качеств") || h.includes("класс"));
     const priceIndex = header.findIndex((h) => h.includes("price") || h.includes("цена") || h.includes("стоимость"));
-    
-    // Find photo column index
     const photoIndex = header.findIndex((h) => 
       h.includes("photo") || h.includes("фото") || h.includes("image") || h.includes("url") || h.includes("ссылка")
     );
@@ -122,24 +245,21 @@ export default function AdminDashboard() {
       const condition: "new" | "used" = 
         conditionRaw?.includes("нов") || conditionRaw === "new" ? "new" : "used";
       
-      // Parse price: remove spaces, currency symbol, convert to number format
       let price: string | undefined;
       if (priceIndex !== -1 && values[priceIndex]) {
         const priceStr = values[priceIndex]
-          .replace(/\s/g, "")  // Remove all spaces
-          .replace(/₽/g, "")   // Remove ruble symbol
-          .replace(/,/g, "."); // Replace comma with dot
+          .replace(/\s/g, "")
+          .replace(/₽/g, "")
+          .replace(/,/g, ".");
         const priceNum = parseFloat(priceStr);
         if (!isNaN(priceNum)) {
           price = priceNum.toString();
         }
       }
 
-      // Parse photos: multiple URLs separated by ", " in one cell
       const photoUrls: string[] = [];
       if (photoIndex !== -1 && values[photoIndex]) {
         const photoCell = values[photoIndex];
-        // Split by ", " (comma followed by space) to get individual URLs
         const urls = photoCell.split(", ").map(u => u.trim()).filter(u => u);
         for (const url of urls) {
           if (url.startsWith("http") || url.startsWith("//")) {
@@ -364,7 +484,7 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Containers Tab */}
+          {/* Containers Tab - NEW DESIGN with expandable photo rows */}
           <TabsContent value="containers">
             <Card>
               <CardHeader>
@@ -372,7 +492,7 @@ export default function AdminDashboard() {
                   <div>
                     <CardTitle>Контейнеры в базе</CardTitle>
                     <CardDescription>
-                      Управление контейнерами и их фотографиями
+                      Управление контейнерами и их фотографиями. Нажмите на строку для управления фото.
                     </CardDescription>
                   </div>
                   <Button variant="outline" size="sm" onClick={() => refetchContainers()}>
@@ -387,6 +507,7 @@ export default function AdminDashboard() {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead className="w-10"></TableHead>
                           <TableHead>ID</TableHead>
                           <TableHead>Название</TableHead>
                           <TableHead>Размер</TableHead>
@@ -399,35 +520,75 @@ export default function AdminDashboard() {
                       </TableHeader>
                       <TableBody>
                         {containers.map((container) => (
-                          <TableRow key={container.id}>
-                            <TableCell className="font-mono text-sm">{container.externalId}</TableCell>
-                            <TableCell>{container.name}</TableCell>
-                            <TableCell>{container.size}</TableCell>
-                            <TableCell>
-                              <span className={container.condition === "new" ? "badge-new" : "badge-used"}>
-                                {container.condition === "new" ? "Новый" : "Б/У"}
-                              </span>
-                            </TableCell>
-                            <TableCell>{container.price || "—"}</TableCell>
-                            <TableCell>
-                              <span className="flex items-center gap-1">
-                                <ImageIcon className="w-4 h-4" />
-                                {container.photos?.length || 0}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <span className={container.isActive ? "text-green-600" : "text-red-600"}>
-                                {container.isActive ? "Активен" : "Скрыт"}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <Link href={`/admin/container/${container.id}`}>
-                                <Button variant="outline" size="sm">
+                          <>
+                            {/* Main row */}
+                            <TableRow 
+                              key={container.id}
+                              className="cursor-pointer hover:bg-gray-50"
+                              onClick={() => toggleRowExpanded(container.id)}
+                            >
+                              <TableCell className="w-10">
+                                {expandedRows.has(container.id) ? (
+                                  <ChevronUp className="w-4 h-4 text-gray-400" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                                )}
+                              </TableCell>
+                              <TableCell className="font-mono text-sm">{container.externalId}</TableCell>
+                              <TableCell>{container.name}</TableCell>
+                              <TableCell>{container.size}</TableCell>
+                              <TableCell>
+                                <span className={container.condition === "new" ? "text-green-600 font-medium" : "text-gray-600"}>
+                                  {container.condition === "new" ? "Новый" : "Б/У"}
+                                </span>
+                              </TableCell>
+                              <TableCell>{container.price || "—"}</TableCell>
+                              <TableCell>
+                                <span className="flex items-center gap-1">
+                                  <ImageIcon className="w-4 h-4" />
+                                  {container.photos?.length || 0}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <span className={container.isActive ? "text-green-600" : "text-red-600"}>
+                                  {container.isActive ? "Активен" : "Скрыт"}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditDialog(container);
+                                  }}
+                                >
+                                  <Edit className="w-4 h-4 mr-1" />
                                   Редактировать
                                 </Button>
-                              </Link>
-                            </TableCell>
-                          </TableRow>
+                              </TableCell>
+                            </TableRow>
+                            
+                            {/* Expanded photo row */}
+                            {expandedRows.has(container.id) && (
+                              <TableRow key={`${container.id}-photos`}>
+                                <TableCell colSpan={9} className="bg-gray-50 p-4">
+                                  <div className="pl-6">
+                                    <h4 className="text-sm font-medium text-gray-700 mb-2">
+                                      Фотографии контейнера
+                                    </h4>
+                                    <PhotoDragDrop
+                                      photos={container.photos || []}
+                                      isReordering={reorderPhotosMutation.isPending}
+                                      isSettingMain={setMainPhotoMutation.isPending}
+                                      onReorder={(photoIds) => handleReorderPhotos(container.id, photoIds)}
+                                      onSetMain={(photoId) => handleSetMainPhoto(container.id, photoId)}
+                                    />
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </>
                         ))}
                       </TableBody>
                     </Table>
@@ -503,6 +664,104 @@ export default function AdminDashboard() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Edit Container Dialog */}
+      <Dialog open={!!editingContainer} onOpenChange={(open) => !open && setEditingContainer(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Редактирование контейнера</DialogTitle>
+            <DialogDescription>
+              ID: {editingContainer?.externalId}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Название</Label>
+              <Input
+                id="edit-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-size">Размер</Label>
+              <Input
+                id="edit-size"
+                value={editSize}
+                onChange={(e) => setEditSize(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-condition">Состояние</Label>
+              <Select value={editCondition} onValueChange={(v) => setEditCondition(v as "new" | "used")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">Новый</SelectItem>
+                  <SelectItem value="used">Б/У</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-price">Цена (₽)</Label>
+              <Input
+                id="edit-price"
+                type="text"
+                value={editPrice}
+                onChange={(e) => setEditPrice(e.target.value)}
+                placeholder="100000.00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Описание</Label>
+              <Textarea
+                id="edit-description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="edit-isActive">Показывать в каталоге</Label>
+              <Switch
+                id="edit-isActive"
+                checked={editIsActive}
+                onCheckedChange={setEditIsActive}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setEditingContainer(null)}>
+              Отмена
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={updateMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {updateMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Сохранение...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Сохранить
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

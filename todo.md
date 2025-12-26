@@ -185,3 +185,44 @@
 ### Gallery
 - [x] Remove border/outline from arrow buttons (left/right)
 - [x] Photos without borders on left and right (full width of block)
+
+
+## Container Detail Page - Complete Redesign (COMPLETED)
+
+### Concept
+- [x] Main background block = IDENTICAL to catalog page (oklab(0.279 -0.00709772 -0.040381 / 0.15), blur(8px))
+- [x] Characteristics block = IDENTICAL to container cards on catalog (same gradient, transparency)
+- [x] Badge (Б/У/Новый) = IDENTICAL to badges on cards (oklab colors)
+- [x] WhatsApp button = IDENTICAL to "Смотреть" button (catalog-button class)
+
+### Gallery
+- [x] Gallery window = FIXED size (minHeight: 350px, maxHeight: 500px)
+- [x] Photos in gallery = object-cover (cropped to fit window)
+- [x] Fullscreen mode = photos in original aspect ratio
+- [x] Slightly rounded corners on gallery window (12px)
+
+### Layout
+- [x] Characteristics block starts at top of photo, ends at bottom of main block (self-stretch)
+- [x] Semi-transparent divider lines between characteristics rows (rgba(148, 163, 184, 0.15))
+
+
+## Исправления страницы контейнера (NEW)
+
+### Блок характеристик
+- [x] Растянуть данные по всему блоку (justify-between)
+- [x] Уменьшить прозрачность блока (0.85/0.80 вместо 0.75/0.65)
+- [x] Блок цены - выделить сильнее (градиент + рамка)
+
+### Галерея фото
+- [x] Центрировать фото по вертикали (flex items-center justify-center)
+- [x] Полноэкранный режим - фиксированный контейнер 90vw x 80vh
+
+
+## Переделка UX админ-панели (NEW)
+
+### Вкладка "Контейнеры в базе"
+- [x] Кнопка "Редактировать" - модальное окно только для данных
+- [x] Убрать управление фото из модального окна
+- [x] Под каждой строкой - раскрывающаяся строка с фото
+- [x] Drag-and-drop для изменения порядка (@dnd-kit)
+- [x] Выбор главной фото по клику (звездочка на главном)

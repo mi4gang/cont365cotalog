@@ -91,10 +91,15 @@ export default function ContainerDetail() {
   );
   const whatsappUrl = `https://wa.me/79999999999?text=${whatsappMessage}`;
 
-  // Badge style - matching reference
+  // Badge style - IDENTICAL to catalog cards (exact from reference)
   const badgeStyle = container.condition === "new"
-    ? { background: "rgba(59, 130, 246, 0.9)" }
-    : { background: "rgba(120, 130, 150, 0.95)" };
+    ? { background: "oklab(0.511 0.0317755 -0.260066 / 0.9)" }
+    : { background: "oklab(0.372 -0.00968297 -0.0429213 / 0.8)" };
+
+  // Card gradient - MORE OPAQUE than before (less transparent, like cards)
+  const cardGradient = container.condition === "new" 
+    ? "linear-gradient(to right bottom, oklab(0.279 -0.00709772 -0.040381 / 0.85) 0%, oklab(0.379 -0.0113991 -0.145554 / 0.80) 100%)"
+    : "linear-gradient(to right bottom, oklab(0.372 -0.00968297 -0.0429213 / 0.85) 0%, oklab(0.279 -0.00709772 -0.040381 / 0.80) 100%)";
 
   return (
     <div className="detail-page">
@@ -108,31 +113,34 @@ export default function ContainerDetail() {
           <span>Назад в каталог</span>
         </Link>
 
-        {/* Main glassmorphism block - SAME STYLE AS CATALOG PAGE */}
+        {/* Main glassmorphism block - IDENTICAL to catalog page (exact from reference) */}
         <div 
-          className="rounded-2xl p-4 sm:p-6"
+          className="rounded-xl p-4 sm:p-8 shadow-lg"
           style={{
-            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.45) 100%)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            border: '1px solid rgba(148, 163, 184, 0.15)'
+            background: 'oklab(0.279 -0.00709772 -0.040381 / 0.15)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            border: '1px solid rgba(148, 163, 184, 0.1)'
           }}
         >
-          {/* Title and ID */}
+          {/* Title and ID - inside main block but above content */}
           <div className="mb-4 sm:mb-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">{container.name}</h1>
             <p className="text-slate-400 text-sm sm:text-base">ID: {container.externalId}</p>
           </div>
 
-          {/* Content grid - Photo gallery and Characteristics side by side, characteristics stretches full height */}
+          {/* Content grid - Photo gallery and Characteristics side by side */}
           <div className="flex flex-col lg:flex-row lg:items-stretch gap-4 sm:gap-6">
-            {/* Photo Gallery - Left Column (wider, no borders) */}
-            <div className="flex-1 lg:flex-[2]">
-              {/* Main Photo - full width, no side borders */}
+            {/* Photo Gallery - Left Column (wider) */}
+            <div className="flex-1 lg:flex-[2] flex flex-col">
+              {/* Main Photo - FIXED size window, CENTERED vertically */}
               <div 
-                className="relative rounded-xl overflow-hidden mb-3 sm:mb-4 cursor-pointer" 
+                className="relative overflow-hidden mb-3 sm:mb-4 cursor-pointer flex-1 flex items-center justify-center" 
                 style={{ 
-                  height: 'clamp(300px, 55vh, 550px)'
+                  minHeight: '350px',
+                  maxHeight: '500px',
+                  borderRadius: '12px',
+                  background: 'rgba(0, 0, 0, 0.2)'
                 }}
                 onClick={() => photos.length > 0 && setIsFullscreen(true)}
                 onTouchStart={handleTouchStart}
@@ -143,7 +151,7 @@ export default function ContainerDetail() {
                   <img
                     src={currentPhoto.url}
                     alt={`${container.name} - фото ${currentPhotoIndex + 1}`}
-                    className="w-full h-full object-contain"
+                    className="max-w-full max-h-full object-contain"
                     draggable={false}
                   />
                 ) : (
@@ -159,14 +167,14 @@ export default function ContainerDetail() {
                   <>
                     <button
                       onClick={(e) => { e.stopPropagation(); prevPhoto(); }}
-                      className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full items-center justify-center text-white transition-colors"
+                      className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full items-center justify-center text-white transition-colors hover:bg-white/20"
                       style={{ background: 'rgba(20, 30, 50, 0.6)' }}
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); nextPhoto(); }}
-                      className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full items-center justify-center text-white transition-colors"
+                      className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full items-center justify-center text-white transition-colors hover:bg-white/20"
                       style={{ background: 'rgba(20, 30, 50, 0.6)' }}
                     >
                       <ChevronRight className="w-5 h-5" />
@@ -182,7 +190,7 @@ export default function ContainerDetail() {
                 )}
               </div>
 
-              {/* Thumbnails - non-transparent */}
+              {/* Thumbnails - non-transparent, solid */}
               {photos.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   {photos.map((photo, index) => (
@@ -208,93 +216,91 @@ export default function ContainerDetail() {
               )}
             </div>
 
-            {/* Characteristics - Right Column (same style as catalog cards, stretches to match photo+thumbnails height) */}
-            <div className="lg:w-[320px] xl:w-[360px] flex-shrink-0 flex">
+            {/* Characteristics - Right Column - MORE OPAQUE, STRETCHED content */}
+            <div className="lg:w-[320px] xl:w-[360px] flex-shrink-0">
               <div 
-                className="rounded-xl p-5 sm:p-6 h-full flex flex-col"
+                className="rounded-xl p-5 sm:p-6 w-full h-full flex flex-col"
                 style={{ 
-                  background: 'linear-gradient(135deg, rgba(59, 71, 99, 0.75) 0%, rgba(36, 46, 71, 0.65) 100%)',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(100, 116, 139, 0.2)'
+                  background: cardGradient,
+                  backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)'
                 }}
               >
                 {/* Title */}
                 <h2 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-5">Характеристики</h2>
 
-                {/* Specifications with dividers */}
-                <div className="flex-1">
-                  {/* Type */}
-                  <div className="pb-3 mb-3" style={{ borderBottom: '1px solid rgba(94, 105, 130, 0.2)' }}>
-                    <p className="text-slate-400 text-xs sm:text-sm mb-1">Тип контейнера</p>
-                    <p className="text-white font-medium text-sm sm:text-base">{container.size}</p>
+                {/* Specifications with dividers - use justify-between to spread */}
+                <div className="flex-1 flex flex-col justify-between">
+                  <div>
+                    {/* Type */}
+                    <div className="pb-3 mb-3" style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.15)' }}>
+                      <p className="text-slate-400 text-xs sm:text-sm mb-1">Тип контейнера</p>
+                      <p className="text-white font-medium text-sm sm:text-base">{container.size}</p>
+                    </div>
+
+                    {/* Condition with Badge - IDENTICAL to catalog cards */}
+                    <div className="pb-3 mb-3" style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.15)' }}>
+                      <p className="text-slate-400 text-xs sm:text-sm mb-1">Состояние</p>
+                      <span 
+                        className="inline-block text-xs font-semibold px-3 py-1 rounded-full"
+                        style={{ 
+                          ...badgeStyle,
+                          color: "#fff"
+                        }}
+                      >
+                        {container.condition === "new" ? "Новый" : "Б/У"}
+                      </span>
+                    </div>
+
+                    {/* Container ID */}
+                    <div className="pb-3 mb-3" style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.15)' }}>
+                      <p className="text-slate-400 text-xs sm:text-sm mb-1">ID контейнера</p>
+                      <p className="text-white font-medium text-sm sm:text-base">{container.externalId}</p>
+                    </div>
+
+                    {/* Description if exists */}
+                    {container.description && (
+                      <div className="pb-3 mb-3" style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.15)' }}>
+                        <p className="text-slate-400 text-xs sm:text-sm mb-1">Описание</p>
+                        <p className="text-white text-xs sm:text-sm leading-relaxed">{container.description}</p>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Condition with Badge */}
-                  <div className="pb-3 mb-3" style={{ borderBottom: '1px solid rgba(94, 105, 130, 0.2)' }}>
-                    <p className="text-slate-400 text-xs sm:text-sm mb-1">Состояние</p>
-                    <span 
-                      className="inline-block text-xs font-semibold px-3 py-1 rounded"
+                  {/* Bottom section: Price + Button */}
+                  <div>
+                    {/* Price Block - MORE VISIBLE background */}
+                    <div 
+                      className="rounded-lg p-4 sm:p-5 mb-4"
                       style={{ 
-                        ...badgeStyle,
-                        color: "#fff"
+                        background: 'linear-gradient(135deg, rgba(51, 65, 85, 0.7) 0%, rgba(30, 41, 59, 0.6) 100%)',
+                        border: '1px solid rgba(148, 163, 184, 0.2)'
                       }}
                     >
-                      {container.condition === "new" ? "Новый" : "Б/У"}
-                    </span>
-                  </div>
-
-                  {/* Container ID */}
-                  <div className="pb-3 mb-3" style={{ borderBottom: '1px solid rgba(94, 105, 130, 0.2)' }}>
-                    <p className="text-slate-400 text-xs sm:text-sm mb-1">ID контейнера</p>
-                    <p className="text-white font-medium text-sm sm:text-base">{container.externalId}</p>
-                  </div>
-
-                  {/* Description if exists */}
-                  {container.description && (
-                    <div className="pb-3 mb-3" style={{ borderBottom: '1px solid rgba(94, 105, 130, 0.2)' }}>
-                      <p className="text-slate-400 text-xs sm:text-sm mb-1">Описание</p>
-                      <p className="text-white text-xs sm:text-sm leading-relaxed">{container.description}</p>
+                      <p className="text-slate-300 text-xs sm:text-sm mb-1">Цена</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-white">
+                        {formatPrice(container.price)}
+                      </p>
                     </div>
-                  )}
-                </div>
 
-                {/* Price Block - with top divider, lighter background */}
-                <div 
-                  className="rounded-lg p-3 sm:p-4 mb-4"
-                  style={{ 
-                    background: 'rgba(30, 40, 60, 0.5)',
-                    borderTop: '1px solid rgba(120, 130, 155, 0.3)'
-                  }}
-                >
-                  <p className="text-slate-400 text-xs sm:text-sm mb-1">Цена</p>
-                  <p className="text-xl sm:text-2xl font-bold text-white">
-                    {formatPrice(container.price)}
-                  </p>
+                    {/* WhatsApp Button - IDENTICAL to "Смотреть" button */}
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="catalog-button w-full h-12 text-base flex items-center justify-center"
+                    >
+                      Заказать через WhatsApp
+                    </a>
+                  </div>
                 </div>
-
-                {/* WhatsApp Button - Full width, proper size */}
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center rounded-xl font-medium text-white transition-all text-sm sm:text-base"
-                  style={{
-                    background: '#515a7a',
-                    height: '48px'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#c97a3a'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = '#515a7a'}
-                >
-                  Заказать через WhatsApp
-                </a>
               </div>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Fullscreen Photo Viewer */}
+      {/* Fullscreen Photo Viewer - FIXED SIZE for all photos */}
       {isFullscreen && photos.length > 0 && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center"
@@ -312,28 +318,41 @@ export default function ContainerDetail() {
             <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
 
-          {/* Main image */}
-          <img
-            src={currentPhoto?.url}
-            alt={`${container.name} - фото ${currentPhotoIndex + 1}`}
-            className="max-w-[95vw] max-h-[85vh] sm:max-w-[90vw] sm:max-h-[90vh] object-contain"
+          {/* Main image container - FIXED SIZE regardless of image resolution */}
+          <div 
+            className="flex items-center justify-center"
+            style={{
+              width: '90vw',
+              height: '80vh',
+              maxWidth: '1200px'
+            }}
             onClick={(e) => e.stopPropagation()}
-            draggable={false}
-          />
+          >
+            <img
+              src={currentPhoto?.url}
+              alt={`${container.name} - фото ${currentPhotoIndex + 1}`}
+              className="max-w-full max-h-full object-contain"
+              style={{
+                minWidth: '50%',
+                minHeight: '50%'
+              }}
+              draggable={false}
+            />
+          </div>
 
           {/* Navigation Arrows - NO BORDER */}
           {photos.length > 1 && (
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); prevPhoto(); }}
-                className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full items-center justify-center text-white transition-colors"
+                className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full items-center justify-center text-white transition-colors hover:bg-white/20"
                 style={{ background: 'rgba(20, 30, 50, 0.6)' }}
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); nextPhoto(); }}
-                className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full items-center justify-center text-white transition-colors"
+                className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full items-center justify-center text-white transition-colors hover:bg-white/20"
                 style={{ background: 'rgba(20, 30, 50, 0.6)' }}
               >
                 <ChevronRight className="w-6 h-6" />
