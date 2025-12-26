@@ -1,0 +1,52 @@
+{
+  "query": "SELECT id, containerId, url, displayOrder, isMain FROM container_photos WHERE containerId = (SELECT id FROM containers WHERE externalId = 'FONU11320953') ORDER BY displayOrder;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4G5vcjpBDodhjLP.root --database iEKTWpNhR5h4VoUdqcFMPB --execute SELECT id, containerId, url, displayOrder, isMain FROM container_photos WHERE containerId = (SELECT id FROM containers WHERE externalId = 'FONU11320953') ORDER BY displayOrder;",
+  "rows": [
+    {
+      "id": "1",
+      "containerId": "1",
+      "url": "https://cdn-ru.bitrix24.ru/b35025894/main/82b/82be23c71a02e708f09fc41a330d89b3/9d25ff1d634723a7cb2e0267605bd81f.png",
+      "displayOrder": "1",
+      "isMain": "0"
+    },
+    {
+      "id": "2",
+      "containerId": "1",
+      "url": "https://cdn-ru.bitrix24.ru/b35025894/main/44f/44fde048bb6ce3566e0a5b9612f6f643/f1ffbd1389a7b9b2bcfcabc87b23f061.png",
+      "displayOrder": "2",
+      "isMain": "0"
+    },
+    {
+      "id": "3",
+      "containerId": "1",
+      "url": "https://cdn-ru.bitrix24.ru/b35025894/main/57d/57dbcc60db511f39b1c990b786e12bfe/bc939df0c51b4255e5ade2c1099d5515.png",
+      "displayOrder": "3",
+      "isMain": "0"
+    },
+    {
+      "id": "4",
+      "containerId": "1",
+      "url": "https://cdn-ru.bitrix24.ru/b35025894/main/901/901c8f3886ecffde8adf815e05b258f2/ca6359f8dc879f699c5fffefb1078c70.png",
+      "displayOrder": "4",
+      "isMain": "1"
+    },
+    {
+      "id": "5",
+      "containerId": "1",
+      "url": "https://cdn-ru.bitrix24.ru/b35025894/main/326/3261f805f80aa5dd5627e782629c00eb/e153f2ef6d5e985a68dd8d9829ad5c23.png",
+      "displayOrder": "5",
+      "isMain": "0"
+    },
+    {
+      "id": "6",
+      "containerId": "1",
+      "url": "https://cdn-ru.bitrix24.ru/b35025894/main/678/6782176c19f3c1b20972180fe33657a2/2c7285586d1cea16bb9b703ff9c0f5bf.png",
+      "displayOrder": "6",
+      "isMain": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcontainerId\turl\tdisplayOrder\tisMain\n1\t1\thttps://cdn-ru.bitrix24.ru/b35025894/main/82b/82be23c71a02e708f09fc41a330d89b3/9d25ff1d634723a7cb2e0267605bd81f.png\t1\t0\n2\t1\thttps://cdn-ru.bitrix24.ru/b35025894/main/44f/44fde048bb6ce3566e0a5b9612f6f643/f1ffbd1389a7b9b2bcfcabc87b23f061.png\t2\t0\n3\t1\thttps://cdn-ru.bitrix24.ru/b35025894/main/57d/57dbcc60db511f39b1c990b786e12bfe/bc939df0c51b4255e5ade2c1099d5515.png\t3\t0\n4\t1\thttps://cdn-ru.bitrix24.ru/b35025894/main/901/901c8f3886ecffde8adf815e05b258f2/ca6359f8dc879f699c5fffefb1078c70.png\t4\t1\n5\t1\thttps://cdn-ru.bitrix24.ru/b35025894/main/326/3261f805f80aa5dd5627e782629c00eb/e153f2ef6d5e985a68dd8d9829ad5c23.png\t5\t0\n6\t1\thttps://cdn-ru.bitrix24.ru/b35025894/main/678/6782176c19f3c1b20972180fe33657a2/2c7285586d1cea16bb9b703ff9c0f5bf.png\t6\t0\n",
+  "stderr": "",
+  "execution_time_ms": 49
+}

@@ -46,6 +46,7 @@ import {
   Edit,
   Save,
 } from "lucide-react";
+import { Fragment } from "react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 import PhotoDragDrop from "@/components/PhotoDragDrop";
@@ -520,10 +521,9 @@ export default function AdminDashboard() {
                       </TableHeader>
                       <TableBody>
                         {containers.map((container) => (
-                          <>
+                          <Fragment key={container.id}>
                             {/* Main row */}
                             <TableRow 
-                              key={container.id}
                               className="cursor-pointer hover:bg-gray-50"
                               onClick={() => toggleRowExpanded(container.id)}
                             >
@@ -571,7 +571,7 @@ export default function AdminDashboard() {
                             
                             {/* Expanded photo row */}
                             {expandedRows.has(container.id) && (
-                              <TableRow key={`${container.id}-photos`}>
+                              <TableRow>
                                 <TableCell colSpan={9} className="bg-gray-50 p-4">
                                   <div className="pl-6">
                                     <h4 className="text-sm font-medium text-gray-700 mb-2">
@@ -588,7 +588,7 @@ export default function AdminDashboard() {
                                 </TableCell>
                               </TableRow>
                             )}
-                          </>
+                          </Fragment>
                         ))}
                       </TableBody>
                     </Table>

@@ -1,4 +1,4 @@
-import { useState, useRef, TouchEvent } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import CatalogHeader from "@/components/CatalogHeader";
@@ -9,6 +9,7 @@ export default function ContainerDetail() {
   const containerId = parseInt(params.id || "0", 10);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [initialIndexSet, setInitialIndexSet] = useState(false);
   
   // Touch swipe support
   const touchStartX = useRef<number>(0);
@@ -19,11 +20,22 @@ export default function ContainerDetail() {
     { enabled: containerId > 0 }
   );
 
-  const handleTouchStart = (e: TouchEvent) => {
+  // Set initial photo index to main photo
+  useEffect(() => {
+    if (container?.photos && !initialIndexSet) {
+      const mainPhotoIndex = container.photos.findIndex(p => p.isMain);
+      if (mainPhotoIndex >= 0) {
+        setCurrentPhotoIndex(mainPhotoIndex);
+      }
+      setInitialIndexSet(true);
+    }
+  }, [container?.photos, initialIndexSet]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.targetTouches[0].clientX;
   };
 
-  const handleTouchMove = (e: TouchEvent) => {
+  const handleTouchMove = (e: React.TouchEvent) => {
     touchEndX.current = e.targetTouches[0].clientX;
   };
 
@@ -133,14 +145,12 @@ export default function ContainerDetail() {
           <div className="flex flex-col lg:flex-row lg:items-stretch gap-4 sm:gap-6">
             {/* Photo Gallery - Left Column (wider) */}
             <div className="flex-1 lg:flex-[2] flex flex-col">
-              {/* Main Photo - FIXED size window, CENTERED vertically */}
+              {/* Main Photo - FIXED HEIGHT, object-fit cover with CENTER positioning */}
               <div 
-                className="relative overflow-hidden mb-3 sm:mb-4 cursor-pointer flex-1 flex items-center justify-center" 
+                className="relative overflow-hidden mb-3 sm:mb-4 cursor-pointer" 
                 style={{ 
-                  minHeight: '350px',
-                  maxHeight: '500px',
-                  borderRadius: '12px',
-                  background: 'rgba(0, 0, 0, 0.2)'
+                  height: '400px',
+                  borderRadius: '12px'
                 }}
                 onClick={() => photos.length > 0 && setIsFullscreen(true)}
                 onTouchStart={handleTouchStart}
@@ -151,7 +161,8 @@ export default function ContainerDetail() {
                   <img
                     src={currentPhoto.url}
                     alt={`${container.name} - фото ${currentPhotoIndex + 1}`}
-                    className="max-w-full max-h-full object-contain"
+                    className="w-full h-full object-cover"
+                    style={{ objectPosition: 'center center' }}
                     draggable={false}
                   />
                 ) : (
