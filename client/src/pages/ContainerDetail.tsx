@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect, TouchEvent } from "react";
+import { useState, useRef, TouchEvent } from "react";
 import { useParams, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import CatalogHeader from "@/components/CatalogHeader";
-import { ChevronLeft, ChevronRight, ArrowLeft, Loader2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 
 export default function ContainerDetail() {
   const params = useParams<{ id: string }>();
@@ -33,10 +33,8 @@ export default function ContainerDetail() {
     
     if (Math.abs(diff) > minSwipeDistance) {
       if (diff > 0) {
-        // Swipe left - next photo
         nextPhoto();
       } else {
-        // Swipe right - prev photo
         prevPhoto();
       }
     }
@@ -61,7 +59,7 @@ export default function ContainerDetail() {
           <h1 className="text-2xl font-bold text-white mb-4">Контейнер не найден</h1>
           <Link href="/catalog">
             <button className="back-button">
-              <ArrowLeft className="w-4 h-4" />
+              <ChevronLeft className="w-4 h-4" />
               Вернуться в каталог
             </button>
           </Link>
@@ -93,15 +91,10 @@ export default function ContainerDetail() {
   );
   const whatsappUrl = `https://wa.me/79999999999?text=${whatsappMessage}`;
 
-  // Badge style - more contrasting for visibility on dark background
+  // Badge style - matching reference
   const badgeStyle = container.condition === "new"
-    ? { background: "rgba(59, 130, 246, 0.9)" } // Brighter blue
-    : { background: "rgba(120, 130, 150, 0.95)" }; // Lighter gray for better contrast
-
-  // Card gradient matching catalog cards
-  const cardGradient = container.condition === "new" 
-    ? "linear-gradient(to right bottom, oklab(0.279 -0.00709772 -0.040381 / 0.75) 0%, oklab(0.379 -0.0113991 -0.145554 / 0.65) 100%)"
-    : "linear-gradient(to right bottom, oklab(0.372 -0.00968297 -0.0429213 / 0.75) 0%, oklab(0.279 -0.00709772 -0.040381 / 0.65) 100%)";
+    ? { background: "rgba(59, 130, 246, 0.9)" }
+    : { background: "rgba(120, 130, 150, 0.95)" };
 
   return (
     <div className="detail-page">
@@ -115,33 +108,31 @@ export default function ContainerDetail() {
           <span>Назад в каталог</span>
         </Link>
 
-        {/* Glassmorphism container - includes title and ID */}
+        {/* Main glassmorphism block - SAME STYLE AS CATALOG PAGE */}
         <div 
           className="rounded-2xl p-4 sm:p-6"
           style={{
-            background: 'rgba(20, 30, 50, 0.6)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            border: '1px solid rgba(148, 163, 184, 0.25)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.45) 100%)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(148, 163, 184, 0.15)'
           }}
         >
-          {/* Title and ID - INSIDE the glassmorphism block */}
+          {/* Title and ID */}
           <div className="mb-4 sm:mb-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">{container.name}</h1>
             <p className="text-slate-400 text-sm sm:text-base">ID: {container.externalId}</p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-            {/* Photo Gallery - Left Column (wider) */}
-            <div className="lg:col-span-2">
-              {/* Main Photo - taller, clickable for fullscreen, swipeable */}
+          {/* Content grid - Photo gallery and Characteristics side by side, characteristics stretches full height */}
+          <div className="flex flex-col lg:flex-row lg:items-stretch gap-4 sm:gap-6">
+            {/* Photo Gallery - Left Column (wider, no borders) */}
+            <div className="flex-1 lg:flex-[2]">
+              {/* Main Photo - full width, no side borders */}
               <div 
                 className="relative rounded-xl overflow-hidden mb-3 sm:mb-4 cursor-pointer" 
                 style={{ 
-                  height: 'clamp(300px, 50vh, 500px)',
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  backdropFilter: 'blur(8px)'
+                  height: 'clamp(300px, 55vh, 550px)'
                 }}
                 onClick={() => photos.length > 0 && setIsFullscreen(true)}
                 onTouchStart={handleTouchStart}
@@ -156,25 +147,27 @@ export default function ContainerDetail() {
                     draggable={false}
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
+                  <div className="w-full h-full flex items-center justify-center bg-slate-800/30">
                     <svg className="w-20 h-20 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
                 )}
 
-                {/* Navigation Arrows - hidden on mobile (use swipe) */}
+                {/* Navigation Arrows - NO BORDER, just semi-transparent bg */}
                 {photos.length > 1 && (
                   <>
                     <button
                       onClick={(e) => { e.stopPropagation(); prevPhoto(); }}
-                      className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 items-center justify-center text-white transition-colors border border-white/20"
+                      className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full items-center justify-center text-white transition-colors"
+                      style={{ background: 'rgba(20, 30, 50, 0.6)' }}
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); nextPhoto(); }}
-                      className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 items-center justify-center text-white transition-colors border border-white/20"
+                      className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full items-center justify-center text-white transition-colors"
+                      style={{ background: 'rgba(20, 30, 50, 0.6)' }}
                     >
                       <ChevronRight className="w-5 h-5" />
                     </button>
@@ -189,7 +182,7 @@ export default function ContainerDetail() {
                 )}
               </div>
 
-              {/* Thumbnails - non-transparent, scrollable on mobile */}
+              {/* Thumbnails - non-transparent */}
               {photos.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   {photos.map((photo, index) => (
@@ -201,7 +194,7 @@ export default function ContainerDetail() {
                         border: index === currentPhotoIndex 
                           ? '2px solid rgb(201, 122, 58)' 
                           : '2px solid rgba(100, 116, 139, 0.3)',
-                        opacity: 1 // Non-transparent thumbnails
+                        opacity: 1
                       }}
                     >
                       <img
@@ -215,32 +208,33 @@ export default function ContainerDetail() {
               )}
             </div>
 
-            {/* Specifications - Right Column (narrower) */}
-            <div className="lg:col-span-1">
+            {/* Characteristics - Right Column (same style as catalog cards, stretches to match photo+thumbnails height) */}
+            <div className="lg:w-[320px] xl:w-[360px] flex-shrink-0 flex">
               <div 
-                className="rounded-xl p-4 sm:p-5"
+                className="rounded-xl p-5 sm:p-6 h-full flex flex-col"
                 style={{ 
-                  background: cardGradient,
+                  background: 'linear-gradient(135deg, rgba(59, 71, 99, 0.75) 0%, rgba(36, 46, 71, 0.65) 100%)',
                   backdropFilter: 'blur(12px)',
                   WebkitBackdropFilter: 'blur(12px)',
                   border: '1px solid rgba(100, 116, 139, 0.2)'
                 }}
               >
-                {/* Title "Характеристики" */}
+                {/* Title */}
                 <h2 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-5">Характеристики</h2>
 
-                {/* Specifications */}
-                <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-5">
-                  <div>
+                {/* Specifications with dividers */}
+                <div className="flex-1">
+                  {/* Type */}
+                  <div className="pb-3 mb-3" style={{ borderBottom: '1px solid rgba(94, 105, 130, 0.2)' }}>
                     <p className="text-slate-400 text-xs sm:text-sm mb-1">Тип контейнера</p>
                     <p className="text-white font-medium text-sm sm:text-base">{container.size}</p>
                   </div>
 
-                  {/* Badge inside specifications block - more visible */}
-                  <div>
+                  {/* Condition with Badge */}
+                  <div className="pb-3 mb-3" style={{ borderBottom: '1px solid rgba(94, 105, 130, 0.2)' }}>
                     <p className="text-slate-400 text-xs sm:text-sm mb-1">Состояние</p>
                     <span 
-                      className="inline-block text-xs font-semibold px-3 py-1 rounded-full"
+                      className="inline-block text-xs font-semibold px-3 py-1 rounded"
                       style={{ 
                         ...badgeStyle,
                         color: "#fff"
@@ -250,23 +244,28 @@ export default function ContainerDetail() {
                     </span>
                   </div>
 
-                  <div>
+                  {/* Container ID */}
+                  <div className="pb-3 mb-3" style={{ borderBottom: '1px solid rgba(94, 105, 130, 0.2)' }}>
                     <p className="text-slate-400 text-xs sm:text-sm mb-1">ID контейнера</p>
                     <p className="text-white font-medium text-sm sm:text-base">{container.externalId}</p>
                   </div>
 
+                  {/* Description if exists */}
                   {container.description && (
-                    <div>
+                    <div className="pb-3 mb-3" style={{ borderBottom: '1px solid rgba(94, 105, 130, 0.2)' }}>
                       <p className="text-slate-400 text-xs sm:text-sm mb-1">Описание</p>
                       <p className="text-white text-xs sm:text-sm leading-relaxed">{container.description}</p>
                     </div>
                   )}
                 </div>
 
-                {/* Price Block - Darker background */}
+                {/* Price Block - with top divider, lighter background */}
                 <div 
-                  className="rounded-lg p-3 sm:p-4 mb-4 sm:mb-5"
-                  style={{ background: 'rgba(15, 23, 42, 0.6)' }}
+                  className="rounded-lg p-3 sm:p-4 mb-4"
+                  style={{ 
+                    background: 'rgba(30, 40, 60, 0.5)',
+                    borderTop: '1px solid rgba(120, 130, 155, 0.3)'
+                  }}
                 >
                   <p className="text-slate-400 text-xs sm:text-sm mb-1">Цена</p>
                   <p className="text-xl sm:text-2xl font-bold text-white">
@@ -274,12 +273,18 @@ export default function ContainerDetail() {
                   </p>
                 </div>
 
-                {/* WhatsApp Button - No icon, same hover as "Смотреть" */}
+                {/* WhatsApp Button - Full width, proper size */}
                 <a
                   href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center py-3 px-4 rounded-lg font-semibold text-white transition-all catalog-button text-sm sm:text-base"
+                  className="w-full flex items-center justify-center rounded-xl font-medium text-white transition-all text-sm sm:text-base"
+                  style={{
+                    background: '#515a7a',
+                    height: '48px'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#c97a3a'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = '#515a7a'}
                 >
                   Заказать через WhatsApp
                 </a>
@@ -289,7 +294,7 @@ export default function ContainerDetail() {
         </div>
       </main>
 
-      {/* Fullscreen Photo Viewer with swipe support */}
+      {/* Fullscreen Photo Viewer */}
       {isFullscreen && photos.length > 0 && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center"
@@ -316,18 +321,20 @@ export default function ContainerDetail() {
             draggable={false}
           />
 
-          {/* Navigation Arrows - hidden on mobile (use swipe) */}
+          {/* Navigation Arrows - NO BORDER */}
           {photos.length > 1 && (
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); prevPhoto(); }}
-                className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 items-center justify-center text-white transition-colors"
+                className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full items-center justify-center text-white transition-colors"
+                style={{ background: 'rgba(20, 30, 50, 0.6)' }}
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); nextPhoto(); }}
-                className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 items-center justify-center text-white transition-colors"
+                className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full items-center justify-center text-white transition-colors"
+                style={{ background: 'rgba(20, 30, 50, 0.6)' }}
               >
                 <ChevronRight className="w-6 h-6" />
               </button>

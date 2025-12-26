@@ -167,3 +167,21 @@
 - [x] Adapt container detail page for mobile screens
 - [x] Add swipe gesture support for photo gallery (touch events)
 - [x] Add swipe support for fullscreen photo viewer
+
+
+## Container Detail Page - Style Fixes (COMPLETED)
+
+### Main Background Block
+- [x] Make main block style identical to catalog page (transparent with blur, NOT like card)
+- [x] Same transparency and color as catalog background block
+
+### Characteristics Block
+- [x] Style like container cards (blue gradient, same as catalog cards)
+- [x] Start from top of photo, end at bottom of main block
+- [x] Add semi-transparent divider lines between rows
+- [x] Price block - make lighter (less dark)
+- [x] WhatsApp button - make bigger, smaller font
+
+### Gallery
+- [x] Remove border/outline from arrow buttons (left/right)
+- [x] Photos without borders on left and right (full width of block)
