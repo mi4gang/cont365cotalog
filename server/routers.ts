@@ -1,11 +1,10 @@
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { SignJWT, jwtVerify } from "jose";
 import * as db from "./db";
+import { downloadAndSaveImage } from "./localStorage";
 
 const ADMIN_COOKIE_NAME = "admin_session";
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret-key");
@@ -65,16 +64,6 @@ const adminProcedure = publicProcedure.use(async ({ ctx, next }) => {
 
 export const appRouter = router({
   system: systemRouter,
-  
-  // Original auth router for Manus OAuth (kept for compatibility)
-  auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return { success: true } as const;
-    }),
-  }),
 
   // Admin authentication router (local login/password)
   adminAuth: router({
@@ -386,12 +375,14 @@ export const appRouter = router({
               // Add only new photos (photos not already in DB)
               for (const url of item.photoUrls) {
                 if (!existingPhotoUrls.has(url)) {
+                  // Download and save image locally
+                  const localUrl = await downloadAndSaveImage(url);
                   const maxOrder = existingPhotos.length > 0 
                     ? Math.max(...existingPhotos.map(p => p.displayOrder)) 
                     : 0;
                   await db.addContainerPhoto({
                     containerId: existing.id,
-                    url,
+                    url: localUrl,
                     displayOrder: maxOrder + 1,
                     isMain: existingPhotos.length === 0, // Only set as main if no existing photos
                   });
@@ -413,9 +404,11 @@ export const appRouter = router({
               if (newContainer) {
                 // Add all photos
                 for (let i = 0; i < item.photoUrls.length; i++) {
+                  // Download and save image locally
+                  const localUrl = await downloadAndSaveImage(item.photoUrls[i]);
                   await db.addContainerPhoto({
                     containerId: newContainer.id,
-                    url: item.photoUrls[i],
+                    url: localUrl,
                     displayOrder: i + 1,
                     isMain: i === 0, // First photo is main by default
                   });
