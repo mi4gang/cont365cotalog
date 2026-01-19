@@ -98,10 +98,10 @@ export default function ContainerDetail() {
     return formatted + " ₽";
   };
 
-  const whatsappMessage = encodeURIComponent(
+  const telegramMessage = encodeURIComponent(
     `Здравствуйте! Меня интересует ${container.name} (ID: ${container.externalId})`
   );
-  const whatsappUrl = `https://wa.me/79999999999?text=${whatsappMessage}`;
+  const telegramUrl = `https://t.me/79999999999?text=${telegramMessage}`;
 
   // Badge style - IDENTICAL to catalog cards (exact from reference)
   const badgeStyle = container.condition === "new"
@@ -118,7 +118,7 @@ export default function ContainerDetail() {
       <CatalogHeader />
 
       {/* Main content area */}
-      <main className="container py-4 sm:py-6">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         {/* Back Button */}
         <Link href="/catalog" className="inline-flex items-center gap-2 transition-colors mb-4 sm:mb-6" style={{ color: 'oklch(0.869 0.022 252.894)' }}>
           <ChevronLeft className="w-5 h-5" />
@@ -147,11 +147,9 @@ export default function ContainerDetail() {
             <div className="flex-1 lg:flex-[2] flex flex-col">
               {/* Main Photo - FIXED HEIGHT, object-fit cover with CENTER positioning */}
               <div 
-                className="relative overflow-hidden mb-3 sm:mb-4 cursor-pointer" 
-                style={{ 
-                  height: '400px',
-                  borderRadius: '12px'
-                }}
+                className="relative overflow-hidden mb-3 sm:mb-4 cursor-pointer"                 style={{ 
+                  minHeight: '600px',
+                  maxHeight: '600px',                }}
                 onClick={() => photos.length > 0 && setIsFullscreen(true)}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
@@ -294,14 +292,14 @@ export default function ContainerDetail() {
                       </p>
                     </div>
 
-                    {/* WhatsApp Button - IDENTICAL to "Смотреть" button */}
+                    {/* Telegram Button - IDENTICAL to "Смотреть" button */}
                     <a
-                      href={whatsappUrl}
+                      href={telegramUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="catalog-button w-full h-12 text-base flex items-center justify-center"
+                      className="catalog-button w-full text-center"
                     >
-                      Заказать через WhatsApp
+                      Заказать через Telegram
                     </a>
                   </div>
                 </div>
