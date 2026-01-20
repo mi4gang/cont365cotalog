@@ -1,0 +1,9 @@
+{
+  "query": "DELETE FROM container_photos; DELETE FROM containers;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4G5vcjpBDodhjLP.root --database iEKTWpNhR5h4VoUdqcFMPB --execute DELETE FROM container_photos; DELETE FROM containers;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 60
+}

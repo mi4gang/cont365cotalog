@@ -1,0 +1,35 @@
+<div id="comp_internal_grid_1737364800000_0">
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="ProgId" content="Excel.Sheet">
+<meta name="Generator" content="Microsoft Excel 15">
+<xml>
+</xml>
+</head>
+<body>
+<table border="1">
+	<!-- columns -->
+		<tr>
+							<th>Товар</th>
+							<th>Картинки галереи</th>
+							<th>Розничная цена</th>
+							<th>Тип контейнера</th>
+							<th>Класс / состояние</th>
+							<th>Детальное описание</th>
+							<th>Доступный остаток</th>
+					</tr>
+	<!-- rows -->
+										<tr>
+													<td>PCLU2600945</td>
+													<td>https://cdn-ru.bitrix24.ru/b35025894/iblock/0d8/0d83332e65e8c4047094405b23baf1c6/Screenshot_16.png, https://cdn-ru.bitrix24.ru/b35025894/iblock/8da/8da94537d290d749b802a8bc9c1022f3/Screenshot_17.png, https://cdn-ru.bitrix24.ru/b35025894/iblock/bc3/bc38109e4640cca2987a679261774d8e/Screenshot_18.png, https://cdn-ru.bitrix24.ru/b35025894/iblock/new/new_photo_123.png</td>
+													<td>90&nbsp;000 &#8381;</td>
+													<td>10 футов</td>
+													<td>Б/у</td>
+													<td>описание текст</td>
+													<td>1</td>
+						</tr>
+			</table>
+</body>
+</html>
+</div>

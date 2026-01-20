@@ -1,0 +1,31 @@
+{
+  "query": "SELECT id, containerId, url, displayOrder, isMain FROM container_photos WHERE containerId = 120011 ORDER BY displayOrder;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4G5vcjpBDodhjLP.root --database iEKTWpNhR5h4VoUdqcFMPB --execute SELECT id, containerId, url, displayOrder, isMain FROM container_photos WHERE containerId = 120011 ORDER BY displayOrder;",
+  "rows": [
+    {
+      "id": "120043",
+      "containerId": "120011",
+      "url": "/uploads/64d3e59b938a5f700278a97bed1a3ec2.png",
+      "displayOrder": "1",
+      "isMain": "1"
+    },
+    {
+      "id": "120044",
+      "containerId": "120011",
+      "url": "/uploads/1c685e23a1432f01c647676a8510b0b3.png",
+      "displayOrder": "2",
+      "isMain": "0"
+    },
+    {
+      "id": "120045",
+      "containerId": "120011",
+      "url": "/uploads/31e360efa8c3b0507b4fbda7c389ee0a.png",
+      "displayOrder": "3",
+      "isMain": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcontainerId\turl\tdisplayOrder\tisMain\n120043\t120011\t/uploads/64d3e59b938a5f700278a97bed1a3ec2.png\t1\t1\n120044\t120011\t/uploads/1c685e23a1432f01c647676a8510b0b3.png\t2\t0\n120045\t120011\t/uploads/31e360efa8c3b0507b4fbda7c389ee0a.png\t3\t0\n",
+  "stderr": "",
+  "execution_time_ms": 67
+}

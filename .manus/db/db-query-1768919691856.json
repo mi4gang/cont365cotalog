@@ -1,0 +1,46 @@
+{
+  "query": "SELECT id, url, displayOrder, isMain FROM container_photos WHERE containerId = 120011 ORDER BY displayOrder;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4G5vcjpBDodhjLP.root --database iEKTWpNhR5h4VoUdqcFMPB --execute SELECT id, url, displayOrder, isMain FROM container_photos WHERE containerId = 120011 ORDER BY displayOrder;",
+  "rows": [
+    {
+      "id": "120052",
+      "url": "/uploads/d1b1d14d2d358eaff9b62f691f3f1c47.png",
+      "displayOrder": "4",
+      "isMain": "0"
+    },
+    {
+      "id": "120053",
+      "url": "/uploads/bfa2d9270462c4be910ead636e0abc4f.png",
+      "displayOrder": "5",
+      "isMain": "0"
+    },
+    {
+      "id": "120054",
+      "url": "/uploads/5df6f45ba088a1c78d6f44bbd3d18bbf.png",
+      "displayOrder": "6",
+      "isMain": "0"
+    },
+    {
+      "id": "120067",
+      "url": "/uploads/919141ea4fdc2e9147b857147f3fdf98.png",
+      "displayOrder": "7",
+      "isMain": "0"
+    },
+    {
+      "id": "120068",
+      "url": "/uploads/c1bf7325fdabd4112f65816f4b74e688.png",
+      "displayOrder": "8",
+      "isMain": "0"
+    },
+    {
+      "id": "120069",
+      "url": "/uploads/6a2016e5f8f68ecde5673e61ab4b26b2.png",
+      "displayOrder": "9",
+      "isMain": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\turl\tdisplayOrder\tisMain\n120052\t/uploads/d1b1d14d2d358eaff9b62f691f3f1c47.png\t4\t0\n120053\t/uploads/bfa2d9270462c4be910ead636e0abc4f.png\t5\t0\n120054\t/uploads/5df6f45ba088a1c78d6f44bbd3d18bbf.png\t6\t0\n120067\t/uploads/919141ea4fdc2e9147b857147f3fdf98.png\t7\t0\n120068\t/uploads/c1bf7325fdabd4112f65816f4b74e688.png\t8\t0\n120069\t/uploads/6a2016e5f8f68ecde5673e61ab4b26b2.png\t9\t0\n",
+  "stderr": "",
+  "execution_time_ms": 50
+}

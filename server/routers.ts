@@ -4,6 +4,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { SignJWT, jwtVerify } from "jose";
 import * as db from "./db";
+import { ContainerPhoto } from "../drizzle/schema";
 import { downloadAndSaveImage } from "./localStorage";
 import * as cheerio from "cheerio";
 
@@ -523,19 +524,39 @@ export const appRouter = router({
                 isActive: true,
               });
 
-              // Delete all existing photos before adding new ones
-              await db.deletePhotosByContainerId(existing.id);
+              // Smart photo update: preserve order for existing photos, add new ones to the end
+              const existingPhotos = await db.getPhotosByContainerId(existing.id);
+              const existingPhotoUrls = new Set(existingPhotos.map((p: ContainerPhoto) => p.url));
+              const importPhotoUrls = new Set<string>();
               
-              // Add all photos from import
+              // Find max displayOrder for existing photos
+              const maxOrder = existingPhotos.length > 0 
+                ? Math.max(...existingPhotos.map((p: ContainerPhoto) => p.displayOrder))
+                : 0;
+              
+              // Process photos from import
               for (let i = 0; i < item.photoUrls.length; i++) {
-                // Download and save image locally
                 const localUrl = await downloadAndSaveImage(item.photoUrls[i]);
-                await db.addContainerPhoto({
-                  containerId: existing.id,
-                  url: localUrl,
-                  displayOrder: i + 1,
-                  isMain: i === 0, // First photo is main
-                });
+                importPhotoUrls.add(localUrl);
+                
+                // If photo already exists, keep its order and isMain setting
+                if (!existingPhotoUrls.has(localUrl)) {
+                  // New photo: add to the end
+                  await db.addContainerPhoto({
+                    containerId: existing.id,
+                    url: localUrl,
+                    displayOrder: maxOrder + i + 1,
+                    isMain: false, // New photos are not main by default
+                  });
+                }
+                // If photo exists, do nothing (preserve existing displayOrder and isMain)
+              }
+              
+              // Remove photos that are not in the import
+              for (const existingPhoto of existingPhotos) {
+                if (!importPhotoUrls.has(existingPhoto.url)) {
+                  await db.deletePhoto(existingPhoto.id);
+                }
               }
 
               updated++;

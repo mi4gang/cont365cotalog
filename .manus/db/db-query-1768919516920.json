@@ -1,0 +1,45 @@
+{
+  "query": "\n-- Get photo IDs first\nSELECT id, displayOrder, isMain FROM container_photos WHERE containerId = 120011 ORDER BY displayOrder;\n\n-- Change order: swap 1st and 3rd photo\nUPDATE container_photos SET displayOrder = 10 WHERE containerId = 120011 AND displayOrder = 1;\nUPDATE container_photos SET displayOrder = 1 WHERE containerId = 120011 AND displayOrder = 3;\nUPDATE container_photos SET displayOrder = 3 WHERE containerId = 120011 AND displayOrder = 10;\n\n-- Set 3rd photo as main\nUPDATE container_photos SET isMain = false WHERE containerId = 120011;\nUPDATE container_photos SET isMain = true WHERE containerId = 120011 AND displayOrder = 3;\n\n-- Verify changes\nSELECT id, displayOrder, isMain FROM container_photos WHERE containerId = 120011 ORDER BY displayOrder;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4G5vcjpBDodhjLP.root --database iEKTWpNhR5h4VoUdqcFMPB --execute \n-- Get photo IDs first\nSELECT id, displayOrder, isMain FROM container_photos WHERE containerId = 120011 ORDER BY displayOrder;\n\n-- Change order: swap 1st and 3rd photo\nUPDATE container_photos SET displayOrder = 10 WHERE containerId = 120011 AND displayOrder = 1;\nUPDATE container_photos SET displayOrder = 1 WHERE containerId = 120011 AND displayOrder = 3;\nUPDATE container_photos SET displayOrder = 3 WHERE containerId = 120011 AND displayOrder = 10;\n\n-- Set 3rd photo as main\nUPDATE container_photos SET isMain = false WHERE containerId = 120011;\nUPDATE container_photos SET isMain = true WHERE containerId = 120011 AND displayOrder = 3;\n\n-- Verify changes\nSELECT id, displayOrder, isMain FROM container_photos WHERE containerId = 120011 ORDER BY displayOrder;\n",
+  "rows": [
+    {
+      "id": "120043",
+      "displayOrder": "1",
+      "isMain": "1"
+    },
+    {
+      "id": "120044",
+      "displayOrder": "2",
+      "isMain": "0"
+    },
+    {
+      "id": "120045",
+      "displayOrder": "3",
+      "isMain": "0"
+    },
+    {
+      "id": "id",
+      "displayOrder": "displayOrder",
+      "isMain": "isMain"
+    },
+    {
+      "id": "120045",
+      "displayOrder": "1",
+      "isMain": "0"
+    },
+    {
+      "id": "120044",
+      "displayOrder": "2",
+      "isMain": "0"
+    },
+    {
+      "id": "120043",
+      "displayOrder": "3",
+      "isMain": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tdisplayOrder\tisMain\n120043\t1\t1\n120044\t2\t0\n120045\t3\t0\nid\tdisplayOrder\tisMain\n120045\t1\t0\n120044\t2\t0\n120043\t3\t1\n",
+  "stderr": "",
+  "execution_time_ms": 114
+}

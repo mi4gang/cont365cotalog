@@ -1,0 +1,25 @@
+{
+  "query": "SELECT id, externalId, name FROM containers;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4G5vcjpBDodhjLP.root --database iEKTWpNhR5h4VoUdqcFMPB --execute SELECT id, externalId, name FROM containers;",
+  "rows": [
+    {
+      "id": "120021",
+      "externalId": "PCLU2600945",
+      "name": "PCLU2600945"
+    },
+    {
+      "id": "120022",
+      "externalId": "QWEU2600945",
+      "name": "QWEU2600945"
+    },
+    {
+      "id": "120023",
+      "externalId": "ASDU2600945",
+      "name": "ASDU2600945"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\texternalId\tname\n120021\tPCLU2600945\tPCLU2600945\n120022\tQWEU2600945\tQWEU2600945\n120023\tASDU2600945\tASDU2600945\n",
+  "stderr": "",
+  "execution_time_ms": 49
+}

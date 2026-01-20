@@ -1,0 +1,28 @@
+{
+  "query": "SELECT cp.id, cp.url, cp.displayOrder, cp.isMain \nFROM container_photos cp\nJOIN containers c ON cp.containerId = c.id\nWHERE c.externalId = 'QWEU2600945'\nORDER BY cp.displayOrder;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4G5vcjpBDodhjLP.root --database iEKTWpNhR5h4VoUdqcFMPB --execute SELECT cp.id, cp.url, cp.displayOrder, cp.isMain \nFROM container_photos cp\nJOIN containers c ON cp.containerId = c.id\nWHERE c.externalId = 'QWEU2600945'\nORDER BY cp.displayOrder;",
+  "rows": [
+    {
+      "id": "120096",
+      "url": "/uploads/823c732108ecdcc798320d68d527251d.png",
+      "displayOrder": "1",
+      "isMain": "1"
+    },
+    {
+      "id": "120095",
+      "url": "/uploads/a5ad88cf814a2a84276e58b39bbde4d1.png",
+      "displayOrder": "2",
+      "isMain": "0"
+    },
+    {
+      "id": "120094",
+      "url": "/uploads/61f7fd0a37eca2ed2c05f9d8d68c5792.png",
+      "displayOrder": "3",
+      "isMain": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\turl\tdisplayOrder\tisMain\n120096\t/uploads/823c732108ecdcc798320d68d527251d.png\t1\t1\n120095\t/uploads/a5ad88cf814a2a84276e58b39bbde4d1.png\t2\t0\n120094\t/uploads/61f7fd0a37eca2ed2c05f9d8d68c5792.png\t3\t0\n",
+  "stderr": "",
+  "execution_time_ms": 57
+}

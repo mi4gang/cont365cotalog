@@ -1,0 +1,73 @@
+<div id="comp_191faf026568bc57b34972487e827413"><html>
+<head>
+	<title></title>
+	<meta http-equiv="Content-Type" content="text/html; charset='UTF-8'">
+	<style>
+		td {mso-number-format:\@;}
+		.number0 {mso-number-format:0;}
+		.number2 {mso-number-format:Fixed;}
+	</style>
+</head>
+<body>
+	<table border="1">
+		<!-- columns -->
+		<tr>
+							<th>Товар</th>
+							<th>Картинки галереи</th>
+							<th>Розничная цена</th>
+							<th>Тип контейнера</th>
+							<th>Класс / состояние</th>
+							<th>Детальное описание</th>
+							<th>Доступный остаток</th>
+					</tr>
+
+		<!-- rows -->
+											<tr>
+														<td>PCLU2600945</td>
+														<td>https://cdn-ru.bitrix24.ru/b35025894/iblock/0d8/0d83332e65e8c4047094405b23baf1c6/Screenshot_16.png, https://cdn-ru.bitrix24.ru/b35025894/iblock/8da/8da94537d290d749b802a8bc9c1022f3/Screenshot_17.png, https://cdn-ru.bitrix24.ru/b35025894/iblock/bc3/bc38109e4640cca2987a679261774d8e/Screenshot_18.png</td>
+														<td>90&nbsp;000 &#8381;</td>
+														<td>10 футов</td>
+														<td>Б/у</td>
+														<td>описание текст</td>
+														<td>1</td>
+							</tr>
+								<tr>
+														<td>QWEU2600945</td>
+														<td>https://cdn-ru.bitrix24.ru/b35025894/iblock/dd2/dd25b356b12238aeccb1a26bd169f676/Screenshot_13.png, https://cdn-ru.bitrix24.ru/b35025894/iblock/a58/a58ac9fbf98b7f66e2bb3c14b4e2562d/Screenshot_14.png, https://cdn-ru.bitrix24.ru/b35025894/iblock/3df/3df3c6d50ab58d63418c99c09bf83ad9/Screenshot_15.png</td>
+														<td>70&nbsp;000 &#8381;</td>
+														<td>20 футов 2,9 м</td>
+														<td>Б/у</td>
+														<td></td>
+														<td>1</td>
+							</tr>
+								<tr>
+														<td>ASDU2600945</td>
+														<td>https://cdn-ru.bitrix24.ru/b35025894/iblock/ef8/ef8858560a7fd5956a98910b37d72399/Screenshot_2.png, https://cdn-ru.bitrix24.ru/b35025894/iblock/e95/e9509d7ae72c932d26fc96f2c4286f2c/Screenshot_3.png, https://cdn-ru.bitrix24.ru/b35025894/iblock/837/8377656a55d6af93fe47fa6f950fa856/Screenshot_4.png</td>
+														<td>80&nbsp;000 &#8381;</td>
+														<td>20 футов 2,6 м</td>
+														<td>Новый</td>
+														<td>213qwd</td>
+														<td>1</td>
+							</tr>
+								<tr>
+														<td>ZXCU2600945</td>
+														<td>https://cdn-ru.bitrix24.ru/b35025894/iblock/7bc/7bc45fd212897465da0c66f461e7be39/Screenshot_1.png, https://cdn-ru.bitrix24.ru/b35025894/iblock/ef8/ef8858560a7fd5956a98910b37d72399/Screenshot_2.png, https://cdn-ru.bitrix24.ru/b35025894/iblock/e95/e9509d7ae72c932d26fc96f2c4286f2c/Screenshot_3.png</td>
+														<td>100&nbsp;000 &#8381;</td>
+														<td>20 футов 2,6 м</td>
+														<td>Б/у</td>
+														<td></td>
+														<td>1</td>
+							</tr>
+								<tr>
+														<td>OIUU2600945</td>
+														<td>https://cdn-ru.bitrix24.ru/b35025894/iblock/e95/e9509d7ae72c932d26fc96f2c4286f2c/Screenshot_3.png, https://cdn-ru.bitrix24.ru/b35025894/iblock/837/8377656a55d6af93fe47fa6f950fa856/Screenshot_4.png, https://cdn-ru.bitrix24.ru/b35025894/iblock/56f/56fa90c18b5259328dad491d88198bc5/Screenshot_5.png</td>
+														<td>95&nbsp;000 &#8381;</td>
+														<td>20 футов 2,6 м</td>
+														<td>Новый</td>
+														<td></td>
+														<td>1</td>
+							</tr>
+			</table>
+</body>
+</html>
+</div>

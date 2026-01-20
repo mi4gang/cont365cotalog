@@ -17,10 +17,12 @@ export async function ensureUploadsDir() {
   }
 }
 
-// Generate unique filename with hash to prevent collisions
+// Generate deterministic filename based on URL hash
+// Same URL will always produce the same filename
 function generateFilename(originalUrl: string): string {
   const ext = path.extname(new URL(originalUrl).pathname) || ".jpg";
-  const hash = crypto.randomBytes(16).toString("hex");
+  // Use MD5 hash of URL for deterministic filename
+  const hash = crypto.createHash("md5").update(originalUrl).digest("hex");
   return `${hash}${ext}`;
 }
 
@@ -32,6 +34,18 @@ function generateFilename(originalUrl: string): string {
 export async function downloadAndSaveImage(imageUrl: string): Promise<string> {
   await ensureUploadsDir();
 
+  const filename = generateFilename(imageUrl);
+  const filepath = path.join(UPLOADS_DIR, filename);
+  
+  // Check if file already exists (skip download if it does)
+  try {
+    await fs.access(filepath);
+    // File exists, return existing path
+    return `/uploads/${filename}`;
+  } catch {
+    // File doesn't exist, download it
+  }
+
   // Download image
   const response = await fetch(imageUrl);
   if (!response.ok) {
@@ -39,8 +53,6 @@ export async function downloadAndSaveImage(imageUrl: string): Promise<string> {
   }
 
   const buffer = Buffer.from(await response.arrayBuffer());
-  const filename = generateFilename(imageUrl);
-  const filepath = path.join(UPLOADS_DIR, filename);
 
   // Save to disk
   await fs.writeFile(filepath, buffer);
