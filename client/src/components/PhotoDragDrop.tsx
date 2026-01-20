@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   DndContext,
   closestCenter,
@@ -126,10 +126,10 @@ export default function PhotoDragDrop({
 }: PhotoDragDropProps) {
   const [items, setItems] = useState(photos);
 
-  // Update items when photos prop changes
-  if (JSON.stringify(photos.map(p => p.id)) !== JSON.stringify(items.map(i => i.id))) {
+  // Update items when photos prop changes (including isMain flag)
+  useEffect(() => {
     setItems(photos);
-  }
+  }, [photos]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
