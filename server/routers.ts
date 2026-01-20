@@ -5,6 +5,99 @@ import { TRPCError } from "@trpc/server";
 import { SignJWT, jwtVerify } from "jose";
 import * as db from "./db";
 import { downloadAndSaveImage } from "./localStorage";
+import * as cheerio from "cheerio";
+
+// Parse import file (CSV or XLS/HTML)
+async function parseImportFile(fileContent: string, filename: string) {
+  const isXls = filename.toLowerCase().endsWith('.xls') || filename.toLowerCase().endsWith('.xlsx');
+  
+  if (isXls) {
+    // Parse HTML table (XLS exported as HTML)
+    const $ = cheerio.load(fileContent);
+    const rows: any[] = [];
+    
+    $('table tr').each((i, row) => {
+      if (i === 0) return; // Skip header row
+      
+      const cells = $(row).find('td');
+      if (cells.length === 0) return;
+      
+      const productName = $(cells[0]).text().trim();
+      
+      // Skip rows with HTML tags or empty product names
+      if (!productName || productName.startsWith('<') || productName.includes('html') || productName.includes('head') || productName.includes('body') || productName.includes('style')) {
+        return;
+      }
+      const photoUrls = $(cells[1]).text().trim()
+        .split(',')
+        .map(url => url.trim())
+        .filter(url => url.startsWith('http'));
+      const priceText = $(cells[2]).text().trim();
+      const sizeText = $(cells[3]).text().trim();
+      const conditionText = $(cells[4]).text().trim();
+      const description = $(cells[5]).text().trim();
+      
+      // Skip rows without product name
+      if (!productName) return;
+      
+      // Parse price: remove &nbsp;, spaces, and ₽ symbol
+      const price = priceText.replace(/&nbsp;|\s/g, '').replace(/₽|&#8381;/g, '');
+      
+      // Map condition: "Новый" -> "new", "Б/У" -> "used"
+      let condition: "new" | "used" = "used";
+      if (conditionText.toLowerCase().includes('новый') || conditionText.toLowerCase().includes('new')) {
+        condition = "new";
+      }
+      
+      // Size: extract from "Тип контейнера" or use default
+      const size = sizeText || "20 фут";
+      
+      rows.push({
+        externalId: productName, // Product name is both ID and name
+        name: productName,
+        size,
+        condition,
+        price: price || undefined,
+        description: description || undefined,
+        photoUrls,
+      });
+    });
+    
+    return rows;
+  } else {
+    // Parse CSV (legacy format)
+    const lines = fileContent.split('\n').filter(line => line.trim());
+    const rows: any[] = [];
+    
+    for (let i = 1; i < lines.length; i++) { // Skip header
+      const parts = lines[i].split(';');
+      if (parts.length < 6) continue;
+      
+      const externalId = parts[0].trim();
+      const name = parts[1].trim();
+      const photoUrls = parts[2].split(',').map(url => url.trim()).filter(url => url.startsWith('http'));
+      const price = parts[3].trim().replace(/₽|\s/g, '');
+      const size = parts[4].trim();
+      const conditionText = parts[5].trim();
+      
+      let condition: "new" | "used" = "used";
+      if (conditionText.toLowerCase().includes('новый') || conditionText.toLowerCase().includes('new')) {
+        condition = "new";
+      }
+      
+      rows.push({
+        externalId,
+        name,
+        size,
+        condition,
+        price: price || undefined,
+        photoUrls,
+      });
+    }
+    
+    return rows;
+  }
+}
 
 const ADMIN_COOKIE_NAME = "admin_session";
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret-key");
@@ -324,21 +417,17 @@ export const appRouter = router({
         return { success };
       }),
 
-    // Import CSV
+    // Import CSV/XLS
     importCsv: adminProcedure
       .input(z.object({
-        data: z.array(z.object({
-          externalId: z.string(),
-          name: z.string(),
-          size: z.string(),
-          condition: z.enum(["new", "used"]),
-          price: z.string().optional(),
-          photoUrls: z.array(z.string()),
-        })),
-        filename: z.string().optional(),
+        fileContent: z.string(), // Raw file content (CSV or HTML)
+        filename: z.string(),
       }))
       .mutation(async ({ input, ctx }) => {
         const adminUser = (ctx as any).adminUser;
+        
+        // Parse file content
+        const data = await parseImportFile(input.fileContent, input.filename);
         
         // Create import record
         const importId = await db.createImportRecord({
@@ -352,7 +441,7 @@ export const appRouter = router({
         const processedIds: string[] = [];
 
         try {
-          for (const item of input.data) {
+          for (const item of data) {
             processedIds.push(item.externalId);
             
             // Check if container exists
@@ -426,7 +515,7 @@ export const appRouter = router({
           if (importId) {
             await db.updateImportRecord(importId, {
               status: "completed",
-              containersProcessed: input.data.length,
+              containersProcessed: data.length,
               containersAdded: added,
               containersUpdated: updated,
               completedAt: new Date(),
@@ -437,7 +526,7 @@ export const appRouter = router({
             success: true,
             added,
             updated,
-            total: input.data.length,
+            total: data.length,
           };
         } catch (error) {
           // Update import record with error

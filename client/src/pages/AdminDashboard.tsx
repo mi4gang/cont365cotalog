@@ -188,6 +188,8 @@ export default function AdminDashboard() {
     reorderPhotosMutation.mutate({ containerId, photoIds });
   };
 
+  const [fileContent, setFileContent] = useState<string>("");
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -200,6 +202,7 @@ export default function AdminDashboard() {
     reader.onload = (event) => {
       try {
         const text = event.target?.result as string;
+        setFileContent(text); // Store raw content
         const parsed = parseCSV(text);
         setParsedData(parsed);
         toast.success(`Распознано ${parsed.length} контейнеров`);
@@ -211,6 +214,19 @@ export default function AdminDashboard() {
   };
 
   const parseCSV = (text: string): ParsedContainer[] => {
+    // Check if it's XLS (HTML format)
+    if (text.includes('<table') || text.includes('<html')) {
+      // For XLS files, just return a placeholder - server will parse it
+      return [{
+        externalId: "preview",
+        name: "XLS файл будет обработан на сервере",
+        size: "",
+        condition: "used" as const,
+        price: "",
+        photoUrls: [],
+      }];
+    }
+    
     const cleanText = text.replace(/^\uFEFF/, "");
     const lines = cleanText.split("\n").filter((line) => line.trim());
     if (lines.length < 2) {
@@ -283,13 +299,13 @@ export default function AdminDashboard() {
   };
 
   const handleImport = () => {
-    if (parsedData.length === 0) {
+    if (!fileContent) {
       toast.error("Нет данных для импорта");
       return;
     }
 
     importMutation.mutate({
-      data: parsedData,
+      fileContent: fileContent,
       filename: fileName,
     });
   };
