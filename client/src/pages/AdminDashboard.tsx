@@ -388,7 +388,7 @@ export default function AdminDashboard() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".csv"
+                    accept=".csv,.xls"
                     onChange={handleFileSelect}
                     className="hidden"
                   />
