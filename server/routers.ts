@@ -417,6 +417,21 @@ export const appRouter = router({
         return { success };
       }),
 
+    // Delete container
+    deleteContainer: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const success = await db.deleteContainer(input.id);
+        return { success };
+      }),
+
+    // Delete all containers
+    deleteAllContainers: adminProcedure
+      .mutation(async () => {
+        const success = await db.deleteAllContainers();
+        return { success };
+      }),
+
     // Import CSV/XLS
     importCsv: adminProcedure
       .input(z.object({

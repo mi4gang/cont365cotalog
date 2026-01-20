@@ -144,6 +144,26 @@ export default function AdminDashboard() {
     },
   });
 
+  const deleteContainerMutation = trpc.adminContainers.deleteContainer.useMutation({
+    onSuccess: () => {
+      toast.success("Контейнер удален");
+      refetchContainers();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Ошибка удаления");
+    },
+  });
+
+  const deleteAllContainersMutation = trpc.adminContainers.deleteAllContainers.useMutation({
+    onSuccess: () => {
+      toast.success("Все контейнеры удалены");
+      refetchContainers();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Ошибка очистки базы");
+    },
+  });
+
   const toggleRowExpanded = (containerId: number) => {
     setExpandedRows(prev => {
       const newSet = new Set(prev);
@@ -186,6 +206,18 @@ export default function AdminDashboard() {
 
   const handleReorderPhotos = (containerId: number, photoIds: number[]) => {
     reorderPhotosMutation.mutate({ containerId, photoIds });
+  };
+
+  const handleDeleteContainer = (id: number) => {
+    if (confirm('Вы уверены, что хотите удалить этот контейнер? Это действие нельзя отменить.')) {
+      deleteContainerMutation.mutate({ id });
+    }
+  };
+
+  const handleDeleteAllContainers = () => {
+    if (confirm('ВЫ УВЕРЕНЫ? Это удалит ВСЕ контейнеры и фото из базы! Это действие НЕЛЬЗЯ отменить.')) {
+      deleteAllContainersMutation.mutate();
+    }
   };
 
   const [fileContent, setFileContent] = useState<string>("");
@@ -512,10 +544,19 @@ export default function AdminDashboard() {
                       Управление контейнерами и их фотографиями. Нажмите на строку для управления фото.
                     </CardDescription>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => refetchContainers()}>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Обновить
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => refetchContainers()}>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Обновить
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      onClick={() => handleDeleteAllContainers()}
+                    >
+                      Очистить всю базу
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -571,17 +612,29 @@ export default function AdminDashboard() {
                                 </span>
                               </TableCell>
                               <TableCell>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openEditDialog(container);
-                                  }}
-                                >
-                                  <Edit className="w-4 h-4 mr-1" />
-                                  Редактировать
-                                </Button>
+                                <div className="flex gap-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openEditDialog(container);
+                                    }}
+                                  >
+                                    <Edit className="w-4 h-4 mr-1" />
+                                    Редактировать
+                                  </Button>
+                                  <Button 
+                                    variant="destructive" 
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteContainer(container.id);
+                                    }}
+                                  >
+                                    Удалить
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                             

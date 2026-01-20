@@ -346,3 +346,32 @@ export async function getUserByOpenId(openId: string) {
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
+
+
+// ==================== Container Deletion ====================
+
+export async function deleteContainer(containerId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  // Delete all photos first
+  await db.delete(containerPhotos).where(eq(containerPhotos.containerId, containerId));
+  
+  // Delete container
+  await db.delete(containers).where(eq(containers.id, containerId));
+  
+  return true;
+}
+
+export async function deleteAllContainers(): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  // Delete all photos
+  await db.delete(containerPhotos);
+  
+  // Delete all containers
+  await db.delete(containers);
+  
+  return true;
+}
