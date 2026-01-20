@@ -84,11 +84,24 @@ export async function getAdminUserById(id: number): Promise<AdminUser | undefine
 }
 
 export async function verifyAdminPassword(username: string, password: string): Promise<AdminUser | null> {
+  console.log('[Admin Auth] Attempting login for username:', username);
   const user = await getAdminUserByUsername(username);
-  if (!user) return null;
+  if (!user) {
+    console.log('[Admin Auth] ❌ User not found');
+    return null;
+  }
 
+  console.log('[Admin Auth] User found, hash length:', user.passwordHash?.length);
+  console.log('[Admin Auth] Hash preview:', user.passwordHash?.substring(0, 20) + '...');
+  console.log('[Admin Auth] Password to compare:', password);
+  
   const isValid = await bcrypt.compare(password, user.passwordHash);
-  if (!isValid) return null;
+  console.log('[Admin Auth] Password comparison result:', isValid);
+  
+  if (!isValid) {
+    console.log('[Admin Auth] ❌ Password mismatch');
+    return null;
+  }
 
   // Update last signed in using raw SQL
   const db = await getDb();
