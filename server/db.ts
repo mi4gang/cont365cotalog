@@ -1,5 +1,6 @@
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import bcrypt from "bcryptjs";
 import { 
   InsertUser, users, 
@@ -11,6 +12,7 @@ import {
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _connection: mysql.Connection | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
@@ -25,6 +27,24 @@ export async function getDb() {
     }
   }
   return _db;
+}
+
+export async function getConnection() {
+  if (!_connection && process.env.DATABASE_URL) {
+    try {
+      _connection = await mysql.createConnection(process.env.DATABASE_URL);
+    } catch (error) {
+      console.warn("[Database] Failed to create connection:", error);
+      _connection = null;
+    }
+  }
+  return _connection;
+}
+
+export async function execute(sql: string, params?: any[]) {
+  const conn = await getConnection();
+  if (!conn) throw new Error('Database connection not available');
+  return conn.execute(sql, params);
 }
 
 // ==================== Admin Users ====================
@@ -49,16 +69,18 @@ export async function getAdminUserByUsername(username: string): Promise<AdminUse
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db.select().from(adminUsers).where(eq(adminUsers.username, username)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  // Use raw SQL to avoid Drizzle ORM quoting issues with MySQL
+  const result = await execute(`SELECT * FROM \`admin_users\` WHERE \`username\` = ? LIMIT 1`, [username]);
+  return (result as any)[0]?.[0] as AdminUser | undefined;
 }
 
 export async function getAdminUserById(id: number): Promise<AdminUser | undefined> {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db.select().from(adminUsers).where(eq(adminUsers.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  // Use raw SQL to avoid Drizzle ORM quoting issues with MySQL
+  const result = await execute(`SELECT * FROM \`admin_users\` WHERE \`id\` = ? LIMIT 1`, [id]);
+  return (result as any)[0]?.[0] as AdminUser | undefined;
 }
 
 export async function verifyAdminPassword(username: string, password: string): Promise<AdminUser | null> {
@@ -68,12 +90,10 @@ export async function verifyAdminPassword(username: string, password: string): P
   const isValid = await bcrypt.compare(password, user.passwordHash);
   if (!isValid) return null;
 
-  // Update last signed in
+  // Update last signed in using raw SQL
   const db = await getDb();
   if (db) {
-    await db.update(adminUsers)
-      .set({ lastSignedIn: new Date() })
-      .where(eq(adminUsers.id, user.id));
+    await execute(`UPDATE \`admin_users\` SET \`lastSignedIn\` = NOW() WHERE \`id\` = ?`, [user.id]);
   }
 
   return user;
