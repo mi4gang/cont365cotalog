@@ -6,7 +6,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { initDatabase } from "../initDatabase";
+// import { initDatabase } from "../initDatabase"; // Disabled: use manual SQL script instead
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -28,8 +28,8 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
-  // Initialize database (create tables and default admin if needed)
-  await initDatabase();
+  // Database initialization disabled - use init-production-mysql.sql script in phpMyAdmin instead
+  // await initDatabase();
   
   const app = express();
   const server = createServer(app);
