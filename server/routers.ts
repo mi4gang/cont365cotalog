@@ -25,16 +25,15 @@ async function parseImportFile(fileContent: string, filename: string) {
     };
     
     // Expected column names with variations
-    const columnPatterns = {
+    const columnPatterns: Record<string, string[]> = {
       product: ['товар', 'название', 'наименование', 'id', 'product', 'name'],
-      photos: ['картинки', 'галерея', 'фото', 'изображения', 'photos', 'images', 'картинкигалереи'],
+      photos: ['картинки', 'галерея', 'фото', 'картинкигалереи', 'photos', 'gallery', 'images'],
       price: ['цена', 'розничнаяцена', 'стоимость', 'price', 'retailprice'],
       size: ['тип', 'типконтейнера', 'размер', 'type', 'containertype', 'size'],
       condition: ['класс', 'состояние', 'качество', 'класссостояние', 'condition', 'quality', 'класскачества'],
       description: ['описание', 'детальноеописание', 'description', 'detaileddescription'],
-    };
-    
-    // Read header row to determine column indices
+      inventory: ['доступныйостаток', 'остаток', 'наличие', 'доступность', 'inventory', 'stock', 'available'],
+    }; // Read header row to determine column indices
     let columnIndices: Record<string, number> = {};
     
     $('table tr').each((i, row) => {
@@ -77,6 +76,16 @@ async function parseImportFile(fileContent: string, filename: string) {
       const sizeText = columnIndices.size !== undefined ? $(cells[columnIndices.size]).text().trim() : '';
       const conditionText = columnIndices.condition !== undefined ? $(cells[columnIndices.condition]).text().trim() : '';
       const description = columnIndices.description !== undefined ? $(cells[columnIndices.description]).text().trim() : '';
+      const inventoryText = columnIndices.inventory !== undefined ? $(cells[columnIndices.inventory]).text().trim() : '';
+      
+      // Filter by inventory: if column exists, only import items with value = 1
+      // If column doesn't exist, import all items (default behavior)
+      if (columnIndices.inventory !== undefined) {
+        const inventoryValue = parseInt(inventoryText) || 0;
+        if (inventoryValue !== 1) {
+          return; // Skip this row - not available
+        }
+      }
       
       // Skip rows without product name
       if (!productName) return;
