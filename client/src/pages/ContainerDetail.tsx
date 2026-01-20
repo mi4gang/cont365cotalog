@@ -69,7 +69,7 @@ export default function ContainerDetail() {
         <CatalogHeader />
         <div className="container py-20 text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Контейнер не найден</h1>
-          <Link href="/catalog">
+          <Link href="/">
             <button className="back-button">
               <ChevronLeft className="w-4 h-4" />
               Вернуться в каталог
@@ -120,7 +120,7 @@ export default function ContainerDetail() {
       {/* Main content area */}
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         {/* Back Button */}
-        <Link href="/catalog" className="inline-flex items-center gap-2 transition-colors mb-4 sm:mb-6" style={{ color: 'oklch(0.869 0.022 252.894)' }}>
+        <Link href="/" className="inline-flex items-center gap-2 transition-colors mb-4 sm:mb-6" style={{ color: 'oklch(0.869 0.022 252.894)' }}>
           <ChevronLeft className="w-5 h-5" />
           <span>Назад в каталог</span>
         </Link>

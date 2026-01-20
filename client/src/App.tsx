@@ -6,7 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
 // Pages
-import Home from "./pages/Home";
+// import Home from "./pages/Home"; // Removed - catalog is now homepage
 import Catalog from "./pages/Catalog";
 import ContainerDetail from "./pages/ContainerDetail";
 import AdminLogin from "./pages/AdminLogin";
@@ -18,14 +18,13 @@ function Router() {
   return (
     <Switch>
       {/* Public Routes */}
-      <Route path="/" component={Home} />
-      <Route path="/catalog" component={Catalog} />
+      <Route path="/" component={Catalog} />
       <Route path="/container/:id" component={ContainerDetail} />
       
-      {/* Admin Routes */}
-      <Route path="/admin/login" component={AdminLogin} />
+      {/* Admin Routes (backdoor) */}
+      <Route path="/admin" component={AdminLogin} />
       <Route path="/admin/setup" component={Setup} />
-      <Route path="/admin" component={AdminDashboard} />
+      <Route path="/admin/dashboard" component={AdminDashboard} />
       <Route path="/admin/container/:id" component={AdminContainerEdit} />
       
       {/* 404 */}

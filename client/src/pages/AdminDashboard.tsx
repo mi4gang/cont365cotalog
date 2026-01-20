@@ -404,7 +404,7 @@ export default function AdminDashboard() {
               </span>
             </div>
             <div className="flex items-center gap-4">
-              <Link href="/catalog">
+              <Link href="/">
                 <Button variant="outline" size="sm">
                   <Package className="w-4 h-4 mr-2" />
                   Каталог

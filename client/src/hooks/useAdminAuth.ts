@@ -2,7 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
 
-export function useAdminAuth(redirectTo: string = "/admin/login") {
+export function useAdminAuth(redirectTo: string = "/admin") {
   const [, setLocation] = useLocation();
   const [isChecking, setIsChecking] = useState(true);
   
@@ -48,7 +48,7 @@ export function useAdminLogout() {
     onSuccess: () => {
       localStorage.removeItem("admin_token");
       utils.adminAuth.me.invalidate();
-      setLocation("/admin/login");
+      setLocation("/admin");
     },
   });
 

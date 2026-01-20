@@ -5,14 +5,14 @@ interface CatalogHeaderProps {
   backUrl?: string;
 }
 
-export default function CatalogHeader({ showBackButton, backUrl = "/catalog" }: CatalogHeaderProps) {
+export default function CatalogHeader({ showBackButton, backUrl = "/" }: CatalogHeaderProps) {
   return (
     <header className="relative z-50 bg-transparent">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
         {/* Mobile: stacked layout, Desktop: row layout */}
         <div className="flex flex-col sm:flex-row items-center sm:items-center justify-between gap-3 sm:gap-0">
           {/* Logo and Title */}
-          <Link href="/catalog" className="flex items-center" style={{ gap: '0' }}>
+          <Link href="/" className="flex items-center" style={{ gap: '0' }}>
             {/* Logo: responsive sizing */}
             <img 
               src="/logo.png" 

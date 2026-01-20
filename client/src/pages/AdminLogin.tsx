@@ -18,7 +18,7 @@ export default function AdminLogin() {
         localStorage.setItem("admin_token", data.token);
         toast.success("Вход выполнен успешно");
         // Use window.location for full page reload to ensure auth state is updated
-        window.location.href = "/admin";
+        window.location.href = "/admin/dashboard";
       }
     },
     onError: (error) => {
