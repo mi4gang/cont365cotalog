@@ -61,7 +61,7 @@ export default function CatalogHeader({ showBackButton, backUrl = "/catalog" }: 
           {/* Contact Info - responsive */}
           <div className="flex items-center gap-4 sm:gap-6">
             <a 
-              href="tel:+79999999999" 
+              href="tel:+79896869231" 
               className="transition-all hover:text-white text-sm sm:text-base"
               style={{ 
                 color: 'rgb(200, 200, 200)',
@@ -71,10 +71,10 @@ export default function CatalogHeader({ showBackButton, backUrl = "/catalog" }: 
                 transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
-              +7 (999) 999-99-99
+              +7 (989) 686-92-31
             </a>
             <a 
-              href="https://wa.me/79999999999" 
+              href="https://t.me/+79896869231" 
               target="_blank" 
               rel="noopener noreferrer"
               className="transition-all catalog-whatsapp-link text-sm sm:text-base"

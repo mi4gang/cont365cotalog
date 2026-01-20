@@ -101,7 +101,7 @@ export default function ContainerDetail() {
   const telegramMessage = encodeURIComponent(
     `Здравствуйте! Меня интересует ${container.name} (ID: ${container.externalId})`
   );
-  const telegramUrl = `https://t.me/79999999999?text=${telegramMessage}`;
+  const telegramUrl = `https://t.me/+79896869231?text=${telegramMessage}`;
 
   // Badge style - IDENTICAL to catalog cards (exact from reference)
   const badgeStyle = container.condition === "new"
