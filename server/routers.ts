@@ -510,6 +510,7 @@ export const appRouter = router({
                 size: item.size,
                 condition: item.condition,
                 price: item.price,
+                description: item.description,
                 isActive: true,
               });
 
@@ -537,6 +538,7 @@ export const appRouter = router({
                 size: item.size,
                 condition: item.condition,
                 price: item.price,
+                description: item.description,
                 isActive: true,
               });
 
