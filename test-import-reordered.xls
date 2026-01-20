@@ -1,0 +1,58 @@
+<div id="comp_test"><html>
+<head>
+	<title></title>
+	<meta http-equiv="Content-Type" content="text/html; charset='UTF-8'">
+	<style>
+		td {mso-number-format:\@;}
+		.number0 {mso-number-format:0;}
+		.number2 {mso-number-format:Fixed;}
+	</style>
+</head>
+<body>
+	<table border="1">
+		<!-- columns - REORDERED -->
+		<tr>
+							<th>Товар</th>
+							<th>Детальное описание</th>
+							<th>Класс / состояние</th>
+							<th>Тип контейнера</th>
+							<th>Розничная цена</th>
+							<th>Картинки галереи</th>
+					</tr>
+		<!-- rows -->
+											<tr>
+														<td>тест2</td>
+														<td></td>
+														<td></td>
+														<td></td>
+														<td>20&nbsp;000 &#8381;</td>
+														<td></td>
+							</tr>
+								<tr>
+														<td>тов1</td>
+														<td></td>
+														<td></td>
+														<td></td>
+														<td>90&nbsp;000 &#8381;</td>
+														<td>https://cdn-ru.bitrix24.ru/b35025894/main/b0c/b0c7046e312f258484d4f5d880220d02/5695f572263131b8489b6b2b5b4d8828.png, https://cdn-ru.bitrix24.ru/b35025894/main/070/0700a3acc6c80432c943b0cde3ff4df0/806e23dc3ef8147028e3d6a3c5379288.png, https://cdn-ru.bitrix24.ru/b35025894/main/44f/44fde048bb6ce3566e0a5b9612f6f643/f1ffbd1389a7b9b2bcfcabc87b23f061.png</td>
+							</tr>
+								<tr>
+														<td>тов2</td>
+														<td></td>
+														<td></td>
+														<td></td>
+														<td>100&nbsp;000 &#8381;</td>
+														<td>https://cdn-ru.bitrix24.ru/b35025894/main/4ac/4ac4212374057f68911676238b5e29fa/59e0de18aa18e147537df60564187810.png, https://cdn-ru.bitrix24.ru/b35025894/main/6a0/6a04e1facf032cbbbbb7780cc25b39e2/d91c213264a7cfd2d77a1385410b362d.png, https://cdn-ru.bitrix24.ru/b35025894/main/678/67893b05b258ac31cc2f8b52d5822041/3bfebcb44f504d9c335cbae2219b9f9d.png</td>
+							</tr>
+								<tr>
+														<td>123123</td>
+														<td>123</td>
+														<td>Новый</td>
+														<td>20 футов 2,6 м</td>
+														<td>100&nbsp;000 &#8381;</td>
+														<td>https://cdn-ru.bitrix24.ru/b35025894/main/b0c/b0c7046e312f258484d4f5d880220d02/5695f572263131b8489b6b2b5b4d8828.png, https://cdn-ru.bitrix24.ru/b35025894/main/070/0700a3acc6c80432c943b0cde3ff4df0/806e23dc3ef8147028e3d6a3c5379288.png, https://cdn-ru.bitrix24.ru/b35025894/main/44f/44fde048bb6ce3566e0a5b9612f6f643/f1ffbd1389a7b9b2bcfcabc87b23f061.png, https://cdn-ru.bitrix24.ru/b35025894/main/6c0/6c0ce8e4f0cd9e217b086d744c30b36d/144fb259b23afd7b9417e522440d46ef.png</td>
+							</tr>
+			</table>
+</body>
+</html>
+</div>

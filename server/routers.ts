@@ -16,26 +16,67 @@ async function parseImportFile(fileContent: string, filename: string) {
     const $ = cheerio.load(fileContent);
     const rows: any[] = [];
     
+    // Column name mapping - normalize column names for flexible matching
+    const normalizeColumnName = (name: string) => {
+      return name.toLowerCase()
+        .replace(/\s+/g, '') // Remove all spaces
+        .replace(/[\/-]/g, '') // Remove slashes and dashes
+        .trim();
+    };
+    
+    // Expected column names with variations
+    const columnPatterns = {
+      product: ['товар', 'название', 'наименование', 'id', 'product', 'name'],
+      photos: ['картинки', 'галерея', 'фото', 'изображения', 'photos', 'images', 'картинкигалереи'],
+      price: ['цена', 'розничнаяцена', 'стоимость', 'price', 'retailprice'],
+      size: ['тип', 'типконтейнера', 'размер', 'type', 'containertype', 'size'],
+      condition: ['класс', 'состояние', 'качество', 'класссостояние', 'condition', 'quality', 'класскачества'],
+      description: ['описание', 'детальноеописание', 'description', 'detaileddescription'],
+    };
+    
+    // Read header row to determine column indices
+    let columnIndices: Record<string, number> = {};
+    
     $('table tr').each((i, row) => {
-      if (i === 0) return; // Skip header row
+      if (i === 0) {
+        // Parse header row
+        const headerCells = $(row).find('td, th');
+        headerCells.each((colIndex, cell) => {
+          const headerText = normalizeColumnName($(cell).text());
+          
+          // Match header to column type
+          for (const [key, patterns] of Object.entries(columnPatterns)) {
+            if (patterns.some(pattern => headerText.includes(pattern) || pattern.includes(headerText))) {
+              columnIndices[key] = colIndex;
+              break;
+            }
+          }
+        });
+        return; // Skip header row
+      }
       
       const cells = $(row).find('td');
       if (cells.length === 0) return;
       
-      const productName = $(cells[0]).text().trim();
+      // Extract data using column indices
+      const productName = columnIndices.product !== undefined ? $(cells[columnIndices.product]).text().trim() : '';
       
       // Skip rows with HTML tags or empty product names
       if (!productName || productName.startsWith('<') || productName.includes('html') || productName.includes('head') || productName.includes('body') || productName.includes('style')) {
         return;
       }
-      const photoUrls = $(cells[1]).text().trim()
-        .split(',')
-        .map(url => url.trim())
-        .filter(url => url.startsWith('http'));
-      const priceText = $(cells[2]).text().trim();
-      const sizeText = $(cells[3]).text().trim();
-      const conditionText = $(cells[4]).text().trim();
-      const description = $(cells[5]).text().trim();
+      
+      const photoUrls = columnIndices.photos !== undefined
+        ? $(cells[columnIndices.photos]).text().trim()
+            .split(',')
+            .map(url => url.trim())
+            .filter(url => url.startsWith('http'))
+        : [];
+      
+      const priceText = columnIndices.price !== undefined ? $(cells[columnIndices.price]).text().trim() : '';
+      const sizeText = columnIndices.size !== undefined ? $(cells[columnIndices.size]).text().trim() : '';
+      const conditionText = columnIndices.condition !== undefined ? $(cells[columnIndices.condition]).text().trim() : '';
+      const description = columnIndices.description !== undefined ? $(cells[columnIndices.description]).text().trim() : '';
       
       // Skip rows without product name
       if (!productName) return;

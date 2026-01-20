@@ -240,9 +240,9 @@ export default function ContainerDetail() {
                 {/* Specifications with dividers - use justify-between to spread */}
                 <div className="flex-1 flex flex-col justify-between">
                   <div>
-                    {/* Type */}
+                    {/* Size */}
                     <div className="pb-3 mb-3" style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.15)' }}>
-                      <p className="text-slate-400 text-xs sm:text-sm mb-1">Тип контейнера</p>
+                      <p className="text-slate-400 text-xs sm:text-sm mb-1">Размер</p>
                       <p className="text-white font-medium text-sm sm:text-base">{container.size}</p>
                     </div>
 
@@ -266,10 +266,10 @@ export default function ContainerDetail() {
                       <p className="text-white font-medium text-sm sm:text-base">{container.externalId}</p>
                     </div>
 
-                    {/* Description if exists */}
+                    {/* Detailed Description if exists */}
                     {container.description && (
                       <div className="pb-3 mb-3" style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.15)' }}>
-                        <p className="text-slate-400 text-xs sm:text-sm mb-1">Описание</p>
+                        <p className="text-slate-400 text-xs sm:text-sm mb-1">Детальное описание</p>
                         <p className="text-white text-xs sm:text-sm leading-relaxed">{container.description}</p>
                       </div>
                     )}

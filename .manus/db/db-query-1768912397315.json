@@ -1,0 +1,31 @@
+{
+  "query": "SELECT id, externalId, name, size, description FROM containers LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4G5vcjpBDodhjLP.root --database iEKTWpNhR5h4VoUdqcFMPB --execute SELECT id, externalId, name, size, description FROM containers LIMIT 5;",
+  "rows": [
+    {
+      "id": "60001",
+      "externalId": "DRYU2281039",
+      "name": "DRYU2281039",
+      "size": "описание тест",
+      "description": "NULL"
+    },
+    {
+      "id": "60002",
+      "externalId": "FSCU7657784",
+      "name": "FSCU7657784",
+      "size": "20 фут",
+      "description": "NULL"
+    },
+    {
+      "id": "60003",
+      "externalId": "PCLU2049236",
+      "name": "PCLU2049236",
+      "size": "20 фут",
+      "description": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\texternalId\tname\tsize\tdescription\n60001\tDRYU2281039\tDRYU2281039\tописание тест\tNULL\n60002\tFSCU7657784\tFSCU7657784\t20 фут\tNULL\n60003\tPCLU2049236\tPCLU2049236\t20 фут\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 110
+}
