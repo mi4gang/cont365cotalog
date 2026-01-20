@@ -1,4 +1,4 @@
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import bcrypt from "bcryptjs";
@@ -170,16 +170,31 @@ export async function updateContainer(id: number, data: Partial<InsertContainer>
 }
 
 export async function deactivateContainersNotIn(externalIds: string[]): Promise<number> {
+  console.log('[DB] deactivateContainersNotIn called with', externalIds.length, 'IDs');
+  console.log('[DB] IDs to keep active:', externalIds);
+  
   const db = await getDb();
-  if (!db) return 0;
+  if (!db) {
+    console.log('[DB] Database not available!');
+    return 0;
+  }
 
   if (externalIds.length === 0) {
+    console.log('[DB] No IDs provided, deactivating ALL containers');
     // Deactivate all
     const result = await db.update(containers)
       .set({ isActive: false })
       .where(eq(containers.isActive, true));
     return 0;
   }
+
+  // Get current active containers for logging
+  const activeContainers = await db.select().from(containers).where(eq(containers.isActive, true));
+  console.log('[DB] Currently active containers:', activeContainers.map(c => c.externalId));
+  
+  // Find which ones will be deactivated
+  const toDeactivate = activeContainers.filter(c => !externalIds.includes(c.externalId));
+  console.log('[DB] Containers to DEACTIVATE:', toDeactivate.map(c => c.externalId));
 
   await db.update(containers)
     .set({ isActive: false })
@@ -188,7 +203,8 @@ export async function deactivateContainersNotIn(externalIds: string[]): Promise<
       sql`${containers.externalId} NOT IN (${sql.join(externalIds.map(id => sql`${id}`), sql`, `)})`
     ));
   
-  return 0;
+  console.log('[DB] Deactivation query executed');
+  return toDeactivate.length;
 }
 
 // ==================== Container Photos ====================

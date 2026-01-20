@@ -10,12 +10,18 @@ import * as cheerio from "cheerio";
 
 // Parse import file (CSV or XLS/HTML)
 async function parseImportFile(fileContent: string, filename: string) {
+  console.log('[Import] ========== PARSE START ==========');
+  console.log('[Import] Filename:', filename);
+  console.log('[Import] Content length:', fileContent.length, 'bytes');
   const isXls = filename.toLowerCase().endsWith('.xls') || filename.toLowerCase().endsWith('.xlsx');
+  
+  console.log('[Import] File type:', isXls ? 'XLS/HTML' : 'CSV');
   
   if (isXls) {
     // Parse HTML table (XLS exported as HTML)
     const $ = cheerio.load(fileContent);
     const rows: any[] = [];
+    console.log('[Import] Parsing XLS/HTML table...');
     
     // Column name mapping - normalize column names for flexible matching
     const normalizeColumnName = (name: string) => {
@@ -34,8 +40,11 @@ async function parseImportFile(fileContent: string, filename: string) {
       condition: ['класс', 'состояние', 'качество', 'класссостояние', 'condition', 'quality', 'класскачества'],
       description: ['описание', 'детальноеописание', 'description', 'detaileddescription'],
       inventory: ['доступныйостаток', 'остаток', 'наличие', 'доступность', 'inventory', 'stock', 'available'],
-    }; // Read header row to determine column indices
+    };
+    
+    // Read header row to determine column indices
     let columnIndices: Record<string, number> = {};
+    console.log('[Import] Looking for columns...');
     
     $('table tr').each((i, row) => {
       if (i === 0) {
@@ -52,6 +61,7 @@ async function parseImportFile(fileContent: string, filename: string) {
             }
           }
         });
+        console.log('[Import] Column indices found:', columnIndices);
         return; // Skip header row
       }
       
@@ -83,7 +93,9 @@ async function parseImportFile(fileContent: string, filename: string) {
       // If column doesn't exist, import all items (default behavior)
       if (columnIndices.inventory !== undefined) {
         const inventoryValue = parseInt(inventoryText) || 0;
+        console.log(`[Import] Row ${i}: ${productName} - inventory=${inventoryValue}`);
         if (inventoryValue !== 1) {
+          console.log(`[Import] SKIPPING (inventory != 1): ${productName}`);
           return; // Skip this row - not available
         }
       }
@@ -112,6 +124,12 @@ async function parseImportFile(fileContent: string, filename: string) {
         description: description || undefined,
         photoUrls,
       });
+    });
+    
+    console.log('[Import] ========== PARSE COMPLETE ==========');
+    console.log('[Import] Total rows parsed:', rows.length);
+    rows.forEach((row, idx) => {
+      console.log(`[Import] Parsed row ${idx + 1}: ${row.externalId}, photos: ${row.photoUrls.length}`);
     });
     
     return rows;
@@ -490,10 +508,16 @@ export const appRouter = router({
         filename: z.string(),
       }))
       .mutation(async ({ input, ctx }) => {
+        console.log('[Import] ========== IMPORT MUTATION START ==========');
+        console.log('[Import] Admin user:', (ctx as any).adminUser?.username);
+        console.log('[Import] Filename:', input.filename);
+        
         const adminUser = (ctx as any).adminUser;
         
         // Parse file content
+        console.log('[Import] Calling parseImportFile...');
         const data = await parseImportFile(input.fileContent, input.filename);
+        console.log('[Import] parseImportFile returned', data.length, 'rows');
         
         // Create import record
         const importId = await db.createImportRecord({
@@ -507,13 +531,18 @@ export const appRouter = router({
         const processedIds: string[] = [];
 
         try {
+          console.log('[Import] Starting to process', data.length, 'containers...');
+          
           for (const item of data) {
+            console.log(`[Import] Processing: ${item.externalId}`);
             processedIds.push(item.externalId);
             
             // Check if container exists
             const existing = await db.getContainerByExternalId(item.externalId);
+            console.log(`[Import] Container exists in DB: ${!!existing}`);
 
             if (existing) {
+              console.log(`[Import] UPDATING existing container ID=${existing.id}`);
               // Update existing container but preserve photo settings
               await db.updateContainer(existing.id, {
                 name: item.name,
@@ -560,7 +589,9 @@ export const appRouter = router({
               }
 
               updated++;
+              console.log(`[Import] Updated container: ${item.externalId}`);
             } else {
+              console.log(`[Import] CREATING new container: ${item.externalId}`);
               // Create new container
               const newContainer = await db.createContainer({
                 externalId: item.externalId,
@@ -587,11 +618,15 @@ export const appRouter = router({
               }
 
               added++;
+              console.log(`[Import] Created new container: ${item.externalId}`);
             }
           }
 
+          console.log('[Import] Deactivating containers not in import...');
+          console.log('[Import] Processed IDs:', processedIds);
           // Deactivate containers not in the new CSV
           await db.deactivateContainersNotIn(processedIds);
+          console.log('[Import] Deactivation complete');
 
           // Update import record
           if (importId) {
@@ -604,6 +639,9 @@ export const appRouter = router({
             });
           }
 
+          console.log('[Import] ========== IMPORT SUCCESS ==========');
+          console.log(`[Import] Added: ${added}, Updated: ${updated}, Total: ${data.length}`);
+          
           return {
             success: true,
             added,
@@ -611,6 +649,8 @@ export const appRouter = router({
             total: data.length,
           };
         } catch (error) {
+          console.error('[Import] ========== IMPORT ERROR ==========');
+          console.error('[Import] Error:', error);
           // Update import record with error
           if (importId) {
             await db.updateImportRecord(importId, {
