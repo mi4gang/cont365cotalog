@@ -24,11 +24,8 @@ COPY . .
 # Build the application
 RUN pnpm build
 
-# Create symlink for backward compatibility with TimeWeb's auto-detection
-RUN mkdir -p dist/server && ln -sf ../index.js dist/server/index.js
-
 # Expose port
 EXPOSE 3000
 
-# Start command - both paths work now!
-CMD ["node", "dist/index.js"]
+# Start command - using TimeWeb's expected path
+CMD ["node", "dist/server/index.js"]
