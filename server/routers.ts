@@ -457,25 +457,19 @@ export const appRouter = router({
                 isActive: true,
               });
 
-              // Get existing photos to preserve their order settings
-              const existingPhotos = await db.getPhotosByContainerId(existing.id);
-              const existingPhotoUrls = new Set(existingPhotos.map(p => p.url));
+              // Delete all existing photos before adding new ones
+              await db.deletePhotosByContainerId(existing.id);
               
-              // Add only new photos (photos not already in DB)
-              for (const url of item.photoUrls) {
-                if (!existingPhotoUrls.has(url)) {
-                  // Download and save image locally
-                  const localUrl = await downloadAndSaveImage(url);
-                  const maxOrder = existingPhotos.length > 0 
-                    ? Math.max(...existingPhotos.map(p => p.displayOrder)) 
-                    : 0;
-                  await db.addContainerPhoto({
-                    containerId: existing.id,
-                    url: localUrl,
-                    displayOrder: maxOrder + 1,
-                    isMain: existingPhotos.length === 0, // Only set as main if no existing photos
-                  });
-                }
+              // Add all photos from import
+              for (let i = 0; i < item.photoUrls.length; i++) {
+                // Download and save image locally
+                const localUrl = await downloadAndSaveImage(item.photoUrls[i]);
+                await db.addContainerPhoto({
+                  containerId: existing.id,
+                  url: localUrl,
+                  displayOrder: i + 1,
+                  isMain: i === 0, // First photo is main
+                });
               }
 
               updated++;
