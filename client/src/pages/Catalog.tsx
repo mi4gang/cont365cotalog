@@ -176,7 +176,7 @@ export default function Catalog() {
                   key={container.id}
                   id={container.id}
                   externalId={container.externalId}
-                  name={container.name}
+                  name={`Контейнер ${container.name}`}
                   size={container.size}
                   condition={container.condition}
                   price={container.price}

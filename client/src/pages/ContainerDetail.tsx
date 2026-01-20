@@ -135,10 +135,9 @@ export default function ContainerDetail() {
             border: '1px solid rgba(148, 163, 184, 0.1)'
           }}
         >
-          {/* Title and ID - inside main block but above content */}
+          {/* Title - inside main block but above content */}
           <div className="mb-4 sm:mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">{container.name}</h1>
-            <p className="text-slate-400 text-sm sm:text-base">ID: {container.externalId}</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">Контейнер {container.name}</h1>
           </div>
 
           {/* Content grid - Photo gallery and Characteristics side by side */}

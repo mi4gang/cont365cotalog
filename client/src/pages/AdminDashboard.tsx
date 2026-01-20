@@ -629,7 +629,7 @@ export default function AdminDashboard() {
                                 )}
                               </TableCell>
                               <TableCell className="font-mono text-sm">{container.externalId}</TableCell>
-                              <TableCell>{container.name}</TableCell>
+                              <TableCell>Контейнер {container.name}</TableCell>
                               <TableCell>{container.size}</TableCell>
                               <TableCell>
                                 <span className={container.condition === "new" ? "text-green-600 font-medium" : "text-gray-600"}>
