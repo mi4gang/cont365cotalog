@@ -49,15 +49,23 @@ async function startServer() {
     serveStatic(app);
   }
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
+  const port = parseInt(process.env.PORT || "3000");
+  
+  // In production, use PORT directly; in development, find available port
+  const finalPort = process.env.NODE_ENV === "production" 
+    ? port 
+    : await findAvailablePort(port);
 
-  if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+  if (finalPort !== port && process.env.NODE_ENV !== "production") {
+    console.log(`Port ${port} is busy, using port ${finalPort} instead`);
   }
 
-  server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
+  // Listen on 0.0.0.0 for production (required by TimeWeb/Docker)
+  const host = process.env.NODE_ENV === "production" ? "0.0.0.0" : "localhost";
+  
+  server.listen(finalPort, host, () => {
+    console.log(`Server is running on port ${finalPort}`);
+    console.log(`Server running on http://${host}:${finalPort}/`);
   });
 }
 
