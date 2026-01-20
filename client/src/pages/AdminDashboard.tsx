@@ -124,13 +124,46 @@ export default function AdminDashboard() {
     },
   });
 
+  const utils = trpc.useUtils();
+
   const setMainPhotoMutation = trpc.adminContainers.setMainPhoto.useMutation({
+    onMutate: async ({ containerId, photoId }) => {
+      // Cancel outgoing refetches
+      await utils.adminContainers.list.cancel();
+
+      // Snapshot previous value
+      const previousContainers = utils.adminContainers.list.getData();
+
+      // Optimistically update
+      utils.adminContainers.list.setData(undefined, (old) => {
+        if (!old) return old;
+        return old.map(container => {
+          if (container.id !== containerId) return container;
+          return {
+            ...container,
+            photos: container.photos?.map(photo => ({
+              ...photo,
+              isMain: photo.id === photoId
+            }))
+          };
+        });
+      });
+
+      return { previousContainers };
+    },
     onSuccess: () => {
       toast.success("Главное фото установлено");
-      refetchContainers();
     },
-    onError: (err) => {
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousContainers) {
+        utils.adminContainers.list.setData(undefined, context.previousContainers);
+      }
       toast.error(err.message || "Ошибка");
+    },
+    onSettled: () => {
+      // Refetch to ensure consistency
+      utils.adminContainers.list.invalidate();
     },
   });
 
@@ -218,6 +251,10 @@ export default function AdminDashboard() {
     if (confirm('ВЫ УВЕРЕНЫ? Это удалит ВСЕ контейнеры и фото из базы! Это действие НЕЛЬЗЯ отменить.')) {
       deleteAllContainersMutation.mutate();
     }
+  };
+
+  const handleToggleActive = (id: number, isActive: boolean) => {
+    updateMutation.mutate({ id, isActive });
   };
 
   const [fileContent, setFileContent] = useState<string>("");
@@ -623,6 +660,16 @@ export default function AdminDashboard() {
                                   >
                                     <Edit className="w-4 h-4 mr-1" />
                                     Редактировать
+                                  </Button>
+                                  <Button 
+                                    variant={container.isActive ? "secondary" : "default"}
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleActive(container.id, !container.isActive);
+                                    }}
+                                  >
+                                    {container.isActive ? "Скрыть" : "Показать"}
                                   </Button>
                                   <Button 
                                     variant="destructive" 
