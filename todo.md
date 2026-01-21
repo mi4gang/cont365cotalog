@@ -497,5 +497,5 @@
 - [ ] Найти РЕАЛЬНУЮ причину (не теоретическую)
 - [ ] Применить правильное исправление
 - [x] Fix blur effect on catalog page - background and glass container must match detail page
-- [x] Fix cross-browser backdrop-filter - works in Safari but not Chrome/Edge
+- [x] Fix cross-browser backdrop-filter - moved backdrop-filter to ::before pseudo-element for Chrome/Edge compatibility
 - [x] Adjust blur intensity - lighter background blur (4px), stronger container blur (16px)
