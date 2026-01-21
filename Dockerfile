@@ -1,5 +1,8 @@
-# Stage 1: Build Node.js application
-FROM node:24-slim AS builder
+# Use Caddy as base image
+FROM caddy:2-alpine
+
+# Install Node.js and build tools
+RUN apk add --no-cache nodejs npm python3 make g++
 
 # Enable corepack for pnpm
 RUN corepack enable
@@ -19,39 +22,25 @@ COPY . .
 # Build the application
 RUN pnpm build
 
-# Stage 2: Production image with Caddy
-FROM caddy:2-alpine
-
-# Install Node.js in the Caddy image
-RUN apk add --no-cache nodejs npm
-
-# Enable corepack for pnpm
-RUN corepack enable
-
-# Set working directory
-WORKDIR /app
-
-# Copy built application from builder
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/drizzle ./drizzle
-COPY --from=builder /app/uploads ./uploads
-
 # Copy Caddyfile
 COPY Caddyfile /etc/caddy/Caddyfile
 
 # Expose ports (80 for HTTP, 443 for HTTPS)
 EXPOSE 80 443
 
-# Create startup script
+# Create startup script that runs both Node.js and Caddy
 RUN echo '#!/bin/sh' > /start.sh && \
-    echo 'node dist/server/index.js &' >> /start.sh && \
+    echo 'echo "Starting Node.js application..."' >> /start.sh && \
+    echo 'cd /app && NODE_ENV=production node dist/server/index.js &' >> /start.sh && \
     echo 'NODE_PID=$!' >> /start.sh && \
+    echo 'echo "Node.js started with PID $NODE_PID"' >> /start.sh && \
+    echo 'sleep 3' >> /start.sh && \
+    echo 'echo "Starting Caddy..."' >> /start.sh && \
     echo 'caddy run --config /etc/caddy/Caddyfile --adapter caddyfile &' >> /start.sh && \
     echo 'CADDY_PID=$!' >> /start.sh && \
+    echo 'echo "Caddy started with PID $CADDY_PID"' >> /start.sh && \
     echo 'wait $NODE_PID $CADDY_PID' >> /start.sh && \
     chmod +x /start.sh
 
-# Start both Node.js and Caddy
+# Start both services
 CMD ["/start.sh"]

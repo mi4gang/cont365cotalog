@@ -1,10 +1,11 @@
 {
     # Global options
     admin off
-    auto_https off
+    # Enable automatic HTTPS
+    email admin@container365.ru
 }
 
-# HTTP server - redirect to HTTPS if domain is used
+# HTTP server on port 80
 :80 {
     # If accessing via domain, redirect to HTTPS
     @domain {
@@ -12,29 +13,27 @@
     }
     redir @domain https://{host}{uri} permanent
 
-    # Otherwise, serve directly (for IP access)
+    # For IP access or non-matching domains, proxy directly
     reverse_proxy localhost:3001
 }
 
-# HTTPS server with automatic SSL
+# HTTPS server on port 443 with automatic SSL
 catalog.container365.ru:443 {
     # Automatic HTTPS with Let's Encrypt
-    tls {
-        # Let's Encrypt will automatically obtain certificate
-        # Certificates stored in /data/caddy
-    }
-
+    # Certificates will be stored in /data/caddy
+    
     # Reverse proxy to Node.js app
     reverse_proxy localhost:3001 {
-        # Health check
-        health_uri /
-        health_interval 10s
-        health_timeout 5s
+        # Forward real IP
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
     }
 
     # Logging
     log {
         output stdout
         format console
+        level INFO
     }
 }
