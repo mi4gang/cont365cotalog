@@ -215,9 +215,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(30, 41, 59, 0.15);
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     z-index: 0;
     pointer-events: none;
   }
@@ -247,8 +246,6 @@
      ============================================ */
   .catalog-glass-container {
     background: oklab(0.279 -0.00709772 -0.040381 / 0.15);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     border-radius: 14px;
     border: 1px solid rgba(148, 163, 184, 0.1);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
