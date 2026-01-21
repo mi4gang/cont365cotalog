@@ -64,8 +64,8 @@ async function startServer() {
     console.log(`Port ${port} is busy, using port ${finalPort} instead`);
   }
 
-  // Listen on 0.0.0.0 for production (required by TimeWeb/Docker)
-  const host = process.env.NODE_ENV === "production" ? "0.0.0.0" : "localhost";
+  // Listen on 0.0.0.0 in all modes (required by Manus proxy and TimeWeb/Docker)
+  const host = "0.0.0.0";
   
   server.listen(finalPort, host, () => {
     console.log(`Server is running on port ${finalPort}`);
