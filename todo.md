@@ -496,3 +496,4 @@
 - [ ] Сравнить мобильную и десктоп версии - почему на мобилке работает, а на десктопе нет
 - [ ] Найти РЕАЛЬНУЮ причину (не теоретическую)
 - [ ] Применить правильное исправление
+- [x] Fix blur effect on catalog page - background and glass container must match detail page
