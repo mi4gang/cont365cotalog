@@ -190,6 +190,7 @@
     min-height: 100vh;
     position: relative;
     background-color: var(--catalog-bg);
+    isolation: isolate;
   }
   
   .catalog-page::before {
@@ -215,8 +216,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 0;
     pointer-events: none;
   }
@@ -488,6 +489,7 @@
     min-height: 100vh;
     position: relative;
     background-color: var(--catalog-bg);
+    isolation: isolate;
   }
   
   .detail-page::before {
@@ -513,8 +515,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 0;
     pointer-events: none;
   }
