@@ -207,6 +207,22 @@
     z-index: 0;
     pointer-events: none;
   }
+
+  /* Add blur effect on desktop */
+  @media (min-width: 640px) {
+    .catalog-page::after {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 0;
+      pointer-events: none;
+    }
+  }
   
   .catalog-page > * {
     position: relative;

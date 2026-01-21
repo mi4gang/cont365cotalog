@@ -119,11 +119,13 @@ export default function ContainerDetail() {
 
       {/* Main content area */}
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
-        {/* Back Button */}
-        <Link href="/" className="inline-flex items-center gap-2 transition-colors mb-4 sm:mb-6" style={{ color: 'oklch(0.869 0.022 252.894)' }}>
-          <ChevronLeft className="w-5 h-5" />
-          <span>Назад в каталог</span>
-        </Link>
+        {/* Back Button - positioned above main block to maintain alignment */}
+        <div className="mb-3">
+          <Link href="/" className="inline-flex items-center gap-2 transition-colors" style={{ color: 'oklch(0.869 0.022 252.894)' }}>
+            <ChevronLeft className="w-5 h-5" />
+            <span>Назад в каталог</span>
+          </Link>
+        </div>
 
         {/* Main glassmorphism block - IDENTICAL to catalog page (exact from reference) */}
         <div 
