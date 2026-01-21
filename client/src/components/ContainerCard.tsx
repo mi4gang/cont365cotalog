@@ -52,7 +52,7 @@ export default function ContainerCard({
         }}
       >
         {/* Photo Section with zoom effect */}
-        <div className="relative h-32 sm:h-40 overflow-hidden flex-shrink-0">
+        <div className="relative h-48 sm:h-40 overflow-hidden flex-shrink-0">
           {mainPhoto ? (
             <img
               src={mainPhoto}
