@@ -78,7 +78,8 @@ interface ContainerWithPhotos {
 }
 
 export default function AdminDashboard() {
-  const { adminUser, isLoading: authLoading } = useAdminAuth();
+  // Auth is handled by AdminAuthGuard wrapper in App.tsx
+  const { adminUser } = useAdminAuth();
   const logoutMutation = useAdminLogout();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -379,14 +380,7 @@ export default function AdminDashboard() {
     });
   };
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
-
+  // AdminAuthGuard handles loading and redirect, so adminUser is guaranteed here
   if (!adminUser) {
     return null;
   }
