@@ -120,7 +120,7 @@ export default function ContainerDetail() {
       {/* Main content area */}
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 relative">
         {/* Back Button - absolutely positioned to not affect layout */}
-        <Link href="/" className="absolute top-2 left-3 sm:left-6 lg:left-8 inline-flex items-center gap-2 transition-colors z-10" style={{ color: 'oklch(0.869 0.022 252.894)' }}>
+        <Link href="/" className="absolute top-1 left-3 sm:left-6 lg:left-8 inline-flex items-center gap-2 transition-colors z-10" style={{ color: 'oklch(0.869 0.022 252.894)' }}>
           <ChevronLeft className="w-5 h-5" />
           <span>Назад в каталог</span>
         </Link>

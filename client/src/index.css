@@ -204,6 +204,17 @@
     background-position: center top;
     background-repeat: no-repeat;
     opacity: 0.5;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .catalog-page::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     z-index: 0;
@@ -491,6 +502,17 @@
     background-position: center top;
     background-repeat: no-repeat;
     opacity: 0.5;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .detail-page::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     z-index: 0;
