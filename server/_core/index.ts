@@ -53,7 +53,10 @@ async function startServer() {
     serveStatic(app);
   }
 
-  const port = parseInt(process.env.PORT || "3000");
+  // In production with Caddy, Node.js runs on 3001 (Caddy proxies from 80/443)
+  // In development, use 3000
+  const defaultPort = process.env.NODE_ENV === "production" ? "3001" : "3000";
+  const port = parseInt(process.env.PORT || defaultPort);
   
   // In production, use PORT directly; in development, find available port
   const finalPort = process.env.NODE_ENV === "production" 
@@ -64,8 +67,9 @@ async function startServer() {
     console.log(`Port ${port} is busy, using port ${finalPort} instead`);
   }
 
-  // Listen on 0.0.0.0 for production (required by TimeWeb/Docker)
-  const host = process.env.NODE_ENV === "production" ? "0.0.0.0" : "localhost";
+  // In production with Caddy, listen on localhost:3001 (Caddy handles external traffic)
+  // In development, listen on localhost
+  const host = "localhost";
   
   server.listen(finalPort, host, () => {
     console.log(`Server is running on port ${finalPort}`);
