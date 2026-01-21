@@ -57,6 +57,7 @@ export default function ContainerCard({
             <img
               src={mainPhoto}
               alt={name}
+              loading="lazy"
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
             />
           ) : (
