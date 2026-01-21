@@ -9,8 +9,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 
-# Set working directory
-WORKDIR /app
+# Set working directory (TimeWeb uses /usr/src/app)
+WORKDIR /usr/src/app
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
