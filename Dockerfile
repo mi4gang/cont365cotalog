@@ -1,11 +1,13 @@
-# Use Caddy as base image
-FROM caddy:2-alpine
-
-# Install Node.js and build tools
-RUN apk add --no-cache nodejs npm python3 make g++
+# Use Node.js 24 slim image
+FROM node:24-slim
 
 # Enable corepack for pnpm
 RUN corepack enable
+
+# Install curl for healthchecks
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
@@ -22,25 +24,8 @@ COPY . .
 # Build the application
 RUN pnpm build
 
-# Copy Caddyfile
-COPY Caddyfile /etc/caddy/Caddyfile
+# Expose port
+EXPOSE 3000
 
-# Expose ports (80 for HTTP, 443 for HTTPS)
-EXPOSE 80 443
-
-# Create startup script that runs both Node.js and Caddy
-RUN echo '#!/bin/sh' > /start.sh && \
-    echo 'echo "Starting Node.js application..."' >> /start.sh && \
-    echo 'cd /app && NODE_ENV=production node dist/server/index.js &' >> /start.sh && \
-    echo 'NODE_PID=$!' >> /start.sh && \
-    echo 'echo "Node.js started with PID $NODE_PID"' >> /start.sh && \
-    echo 'sleep 3' >> /start.sh && \
-    echo 'echo "Starting Caddy..."' >> /start.sh && \
-    echo 'caddy run --config /etc/caddy/Caddyfile --adapter caddyfile &' >> /start.sh && \
-    echo 'CADDY_PID=$!' >> /start.sh && \
-    echo 'echo "Caddy started with PID $CADDY_PID"' >> /start.sh && \
-    echo 'wait $NODE_PID $CADDY_PID' >> /start.sh && \
-    chmod +x /start.sh
-
-# Start both services
-CMD ["/start.sh"]
+# Start command - using TimeWeb's expected path
+CMD ["node", "dist/server/index.js"]
