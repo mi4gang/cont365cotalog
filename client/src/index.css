@@ -193,21 +193,7 @@
     isolation: isolate;
   }
   
-  .catalog-page::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: url('/container-terminal-bg.jpg');
-    background-size: cover;
-    background-position: center top;
-    background-repeat: no-repeat;
-    opacity: 0.5;
-    z-index: 0;
-    pointer-events: none;
-  }
+  /* Background image moved to JSX as <img> tag for better scroll performance */
 
   /* ::after removed - Chrome doesn't support backdrop-filter on pseudo-elements with position:fixed */
   /* Backdrop blur now implemented as real div in Catalog.tsx */
@@ -482,21 +468,7 @@
     isolation: isolate;
   }
   
-  .detail-page::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: url('/container-terminal-bg.jpg');
-    background-size: cover;
-    background-position: center top;
-    background-repeat: no-repeat;
-    opacity: 0.5;
-    z-index: 0;
-    pointer-events: none;
-  }
+  /* Background image moved to JSX as <img> tag for better scroll performance */
 
   /* ::after removed - Chrome doesn't support backdrop-filter on pseudo-elements with position:fixed */
   /* Backdrop blur now implemented as real div in ContainerDetail.tsx */

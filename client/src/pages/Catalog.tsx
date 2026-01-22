@@ -60,6 +60,30 @@ export default function Catalog() {
 
   return (
     <div className="catalog-page min-h-screen">
+      {/* Fixed background image - does NOT move on scroll */}
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: -1,
+          overflow: 'hidden'
+        }}
+      >
+        <img 
+          src="/container-terminal-bg.jpg" 
+          alt=""
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center top',
+            opacity: 0.5
+          }}
+        />
+      </div>
       {/* Backdrop blur layer - Chrome requires real div instead of ::after */}
       <div 
         style={{
@@ -68,11 +92,8 @@ export default function Catalog() {
           left: 0,
           right: 0,
           bottom: 0,
-          backdropFilter: 'blur(2px)',
-          WebkitBackdropFilter: 'blur(2px)',
-          transform: 'translateZ(0)',
-          willChange: 'backdrop-filter',
-          backfaceVisibility: 'hidden',
+          backdropFilter: 'blur(1px)',
+          WebkitBackdropFilter: 'blur(1px)',
           zIndex: 0,
           pointerEvents: 'none'
         }}
