@@ -189,9 +189,8 @@
   .catalog-page {
     min-height: 100vh;
     position: relative;
-    /* background-color removed - was covering the fixed background image */
-    z-index: 10;
-    /* isolation: isolate removed - was breaking position:fixed for background */
+    background-color: var(--catalog-bg);
+    isolation: isolate;
   }
   
   /* Background image moved to JSX as <img> tag for better scroll performance */
@@ -465,9 +464,8 @@
   .detail-page {
     min-height: 100vh;
     position: relative;
-    /* background-color removed - was covering the fixed background image */
-    z-index: 10;
-    /* isolation: isolate removed - was breaking position:fixed for background */
+    background-color: var(--catalog-bg);
+    isolation: isolate;
   }
   
   /* Background image moved to JSX as <img> tag for better scroll performance */

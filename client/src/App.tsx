@@ -14,7 +14,6 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminContainerEdit from "./pages/AdminContainerEdit";
 import Setup from "./pages/Setup";
-import FixedBackground from "./components/FixedBackground";
 
 // Wrapper for protected admin routes
 function ProtectedAdminRoute({ component: Component }: { component: React.ComponentType }) {
@@ -56,8 +55,6 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
-          {/* Global fixed background - at root level to avoid isolation context */}
-          <FixedBackground />
           <Toaster />
           <Router />
         </TooltipProvider>
