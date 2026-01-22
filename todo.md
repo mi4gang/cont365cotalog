@@ -500,4 +500,5 @@
 - [x] Fix cross-browser backdrop-filter - moved backdrop-filter to ::before pseudo-element for Chrome/Edge compatibility
 - [x] Adjust blur intensity - lighter background blur (4px), stronger container blur (16px)
 - [x] Chrome does NOT apply backdrop-filter to ::after with position:fixed - fixed by using regular div with inline style
-- [ ] Update phone number to correct one: 8 (968) 692-25-31
+- [x] Update phone number to correct one: 8 (968) 692-25-31
+- [x] Fix catalog-glass-container blur - Chrome ignores CSS backdrop-filter, need inline style like detail page

@@ -68,8 +68,8 @@ export default function Catalog() {
           left: 0,
           right: 0,
           bottom: 0,
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)',
+          backdropFilter: 'blur(2px)',
+          WebkitBackdropFilter: 'blur(2px)',
           zIndex: 0,
           pointerEvents: 'none'
         }}
@@ -78,7 +78,13 @@ export default function Catalog() {
 
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         {/* Glassmorphism Container for entire catalog */}
-        <div className="catalog-glass-container p-3 sm:p-6">
+        <div 
+          className="catalog-glass-container p-3 sm:p-6"
+          style={{
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)'
+          }}
+        >
           {/* Filters Row - responsive layout */}
           <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
             {/* Filter buttons row */}
