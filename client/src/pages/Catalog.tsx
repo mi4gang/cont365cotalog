@@ -17,17 +17,30 @@ export default function Catalog() {
   const [priceTo, setPriceTo] = useState<string>("");
   const [sliderValues, setSliderValues] = useState<[number, number]>([0, 1000000]);
   
+  // Debounced price values for query (to prevent flickering)
+  const [debouncedPriceFrom, setDebouncedPriceFrom] = useState<string>("");
+  const [debouncedPriceTo, setDebouncedPriceTo] = useState<string>("");
+  
   const sizeDropdownRef = useRef<HTMLDivElement>(null);
   const conditionDropdownRef = useRef<HTMLDivElement>(null);
   const priceDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Debounce price values to prevent flickering on slider movement
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedPriceFrom(priceFrom);
+      setDebouncedPriceTo(priceTo);
+    }, 300); // 300ms debounce
+    return () => clearTimeout(timer);
+  }, [priceFrom, priceTo]);
 
   // Query for displayed containers (with all filters including price)
   const { data: containers, isLoading } = trpc.containers.list.useQuery({
     size: sizeFilter !== "all" ? sizeFilter : undefined,
     condition: conditionFilter !== "all" ? (conditionFilter as "new" | "used") : undefined,
     search: searchQuery || undefined,
-    priceFrom: priceFrom ? parseFloat(priceFrom) : undefined,
-    priceTo: priceTo ? parseFloat(priceTo) : undefined,
+    priceFrom: debouncedPriceFrom ? parseFloat(debouncedPriceFrom) : undefined,
+    priceTo: debouncedPriceTo ? parseFloat(debouncedPriceTo) : undefined,
   });
 
   // Separate query for price range calculation (WITHOUT price filter)
@@ -124,6 +137,10 @@ export default function Catalog() {
 
   const getPriceLabel = () => {
     if (!priceFrom && !priceTo) return "Цена";
+    // Mobile: show only currency symbol if price is set
+    const isMobile = window.innerWidth < 640;
+    if (isMobile && (priceFrom || priceTo)) return "₽";
+    // Desktop: show full range
     if (priceFrom && priceTo) return `${parseInt(priceFrom).toLocaleString()}-${parseInt(priceTo).toLocaleString()}`;
     if (priceFrom) return `от ${parseInt(priceFrom).toLocaleString()}`;
     return `до ${parseInt(priceTo).toLocaleString()}`;
@@ -261,7 +278,7 @@ export default function Catalog() {
                   <ChevronDown className={`w-4 h-4 opacity-60 transition-transform flex-shrink-0 ${priceDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {priceDropdownOpen && (
-                  <div className="catalog-filter-dropdown absolute top-full left-0 mt-1 z-50 w-[calc(100vw-2rem)] sm:w-80 p-4 sm:p-5">
+                  <div className="catalog-filter-dropdown absolute top-full mt-1 z-50 w-[calc(100vw-2rem)] sm:w-80 p-4 sm:p-5 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0">
                     <div className="space-y-4">
                       {/* Range Slider */}
                       <div className="px-1">
