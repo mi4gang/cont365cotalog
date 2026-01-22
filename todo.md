@@ -502,3 +502,7 @@
 - [x] Chrome does NOT apply backdrop-filter to ::after with position:fixed - fixed by using regular div with inline style
 - [x] Update phone number to correct one: 8 (968) 692-25-31
 - [x] Fix catalog-glass-container blur - Chrome ignores CSS backdrop-filter, need inline style like detail page
+
+## Настройка blur эффектов (22.01.2026)
+- [x] Привести blur блоков к одному среднему значению (~12px) на главной и detail странице
+- [x] Исправить пикселизацию фона при blur (артефакты на проводах/кранах)

@@ -68,8 +68,9 @@ export default function Catalog() {
           left: 0,
           right: 0,
           bottom: 0,
-          backdropFilter: 'blur(2px)',
-          WebkitBackdropFilter: 'blur(2px)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          transform: 'translateZ(0)',
           zIndex: 0,
           pointerEvents: 'none'
         }}
@@ -81,8 +82,8 @@ export default function Catalog() {
         <div 
           className="catalog-glass-container p-3 sm:p-6"
           style={{
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)'
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)'
           }}
         >
           {/* Filters Row - responsive layout */}
