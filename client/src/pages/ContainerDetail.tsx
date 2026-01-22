@@ -139,20 +139,7 @@ export default function ContainerDetail() {
           }}
         />
       </div>
-      {/* Backdrop blur layer - Chrome requires real div instead of ::after */}
-      <div 
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backdropFilter: 'blur(1px)',
-          WebkitBackdropFilter: 'blur(1px)',
-          zIndex: 0,
-          pointerEvents: 'none'
-        }}
-      />
+      {/* Backdrop blur layer - Chrome require      {/* Background blur removed - image is already pre-blurred */}
       <CatalogHeader />
 
       {/* Main content area */}
