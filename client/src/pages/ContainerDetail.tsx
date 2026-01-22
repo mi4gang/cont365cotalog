@@ -123,9 +123,11 @@ export default function ContainerDetail() {
           left: 0,
           right: 0,
           bottom: 0,
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)',
+          backdropFilter: 'blur(2px)',
+          WebkitBackdropFilter: 'blur(2px)',
           transform: 'translateZ(0)',
+          willChange: 'backdrop-filter',
+          backfaceVisibility: 'hidden',
           zIndex: 0,
           pointerEvents: 'none'
         }}
@@ -135,7 +137,7 @@ export default function ContainerDetail() {
       {/* Main content area */}
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 relative">
         {/* Back Button - absolutely positioned to not affect layout */}
-        <Link href="/" className="absolute -top-1 left-3 sm:left-6 lg:left-8 inline-flex items-center gap-2 transition-colors z-10" style={{ color: 'oklch(0.869 0.022 252.894)' }}>
+        <Link href="/" className="absolute -top-8 sm:-top-1 left-3 sm:left-6 lg:left-8 inline-flex items-center gap-2 transition-colors z-10" style={{ color: 'oklch(0.869 0.022 252.894)' }}>
           <ChevronLeft className="w-5 h-5" />
           <span>Назад в каталог</span>
         </Link>

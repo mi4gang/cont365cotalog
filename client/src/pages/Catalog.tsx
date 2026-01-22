@@ -68,9 +68,11 @@ export default function Catalog() {
           left: 0,
           right: 0,
           bottom: 0,
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)',
+          backdropFilter: 'blur(2px)',
+          WebkitBackdropFilter: 'blur(2px)',
           transform: 'translateZ(0)',
+          willChange: 'backdrop-filter',
+          backfaceVisibility: 'hidden',
           zIndex: 0,
           pointerEvents: 'none'
         }}
