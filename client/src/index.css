@@ -190,7 +190,7 @@
     min-height: 100vh;
     position: relative;
     background-color: var(--catalog-bg);
-    isolation: isolate;
+    /* isolation: isolate removed - was breaking position:fixed for background */
   }
   
   /* Background image moved to JSX as <img> tag for better scroll performance */
@@ -465,7 +465,7 @@
     min-height: 100vh;
     position: relative;
     background-color: var(--catalog-bg);
-    isolation: isolate;
+    /* isolation: isolate removed - was breaking position:fixed for background */
   }
   
   /* Background image moved to JSX as <img> tag for better scroll performance */
