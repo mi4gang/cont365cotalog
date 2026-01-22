@@ -143,13 +143,7 @@ export default function ContainerDetail() {
       <CatalogHeader />
 
       {/* Main content area */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 relative">
-        {/* Back Button - absolutely positioned to not affect layout */}
-        <Link href="/" className="absolute -top-8 sm:-top-1 left-3 sm:left-6 lg:left-8 inline-flex items-center gap-2 transition-colors z-10" style={{ color: 'oklch(0.869 0.022 252.894)' }}>
-          <ChevronLeft className="w-5 h-5" />
-          <span>Назад в каталог</span>
-        </Link>
-
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         {/* Main glassmorphism block - IDENTICAL to catalog page (exact from reference) */}
         <div 
           className="rounded-xl p-4 sm:p-8 shadow-lg"
@@ -160,7 +154,23 @@ export default function ContainerDetail() {
             border: '1px solid rgba(148, 163, 184, 0.1)'
           }}
         >
-          {/* Title - inside main block but above content */}
+          {/* Back Button - INSIDE content block, above title */}
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-2 mb-4 sm:mb-6 transition-all hover:gap-3 active:scale-95"
+            style={{ 
+              color: 'oklch(0.869 0.022 252.894)',
+              padding: '12px 16px',
+              margin: '-12px -16px 0 -16px',
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent'
+            }}
+          >
+            <ChevronLeft className="w-5 h-5" />
+            <span className="text-base font-medium">Назад в каталог</span>
+          </Link>
+
+          {/* Title */}
           <div className="mb-4 sm:mb-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">Контейнер {container.name}</h1>
           </div>
