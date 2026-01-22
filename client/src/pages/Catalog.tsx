@@ -21,6 +21,7 @@ export default function Catalog() {
   const conditionDropdownRef = useRef<HTMLDivElement>(null);
   const priceDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Query for displayed containers (with all filters including price)
   const { data: containers, isLoading } = trpc.containers.list.useQuery({
     size: sizeFilter !== "all" ? sizeFilter : undefined,
     condition: conditionFilter !== "all" ? (conditionFilter as "new" | "used") : undefined,
@@ -29,28 +30,38 @@ export default function Catalog() {
     priceTo: priceTo ? parseFloat(priceTo) : undefined,
   });
 
+  // Separate query for price range calculation (WITHOUT price filter)
+  const { data: containersForPriceRange } = trpc.containers.list.useQuery({
+    size: sizeFilter !== "all" ? sizeFilter : undefined,
+    condition: conditionFilter !== "all" ? (conditionFilter as "new" | "used") : undefined,
+    search: searchQuery || undefined,
+    // NO priceFrom/priceTo here!
+  });
+
   const { data: sizes } = trpc.containers.getSizes.useQuery();
 
-  // Calculate price range from current containers
+  // Calculate price range from containers WITHOUT price filter
   const priceRange = useMemo(() => {
-    if (!containers || containers.length === 0) return { min: 0, max: 1000000 };
-    const prices = containers.map(c => parseFloat(c.price || "0")).filter(p => p > 0);
+    if (!containersForPriceRange || containersForPriceRange.length === 0) return { min: 0, max: 1000000 };
+    const prices = containersForPriceRange.map(c => parseFloat(c.price || "0")).filter(p => p > 0);
     if (prices.length === 0) return { min: 0, max: 1000000 };
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
     return {
-      min: Math.floor(Math.min(...prices) / 1000) * 1000,
-      max: Math.ceil(Math.max(...prices) / 1000) * 1000
+      min: Math.floor(minPrice / 1000) * 1000,
+      max: maxPrice // Use exact max price, don't round up
     };
-  }, [containers]);
+  }, [containersForPriceRange]);
 
   // Initialize slider values when price range changes
   useEffect(() => {
-    if (containers && containers.length > 0) {
+    if (containersForPriceRange && containersForPriceRange.length > 0) {
+      // Always reset to new range when filters change
       setSliderValues([priceRange.min, priceRange.max]);
-      // Only reset if user hasn't set custom values
-      if (!priceFrom || priceFrom === "0") setPriceFrom(priceRange.min.toString());
-      if (!priceTo || priceTo === "1000000") setPriceTo(priceRange.max.toString());
+      setPriceFrom(priceRange.min.toString());
+      setPriceTo(priceRange.max.toString());
     }
-  }, [priceRange, containers]);
+  }, [priceRange, containersForPriceRange]);
 
   const handleSliderChange = (values: number | number[]) => {
     if (Array.isArray(values)) {
