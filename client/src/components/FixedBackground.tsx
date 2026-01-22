@@ -13,7 +13,7 @@ export default function FixedBackground() {
           left: 0,
           right: 0,
           bottom: 0,
-          zIndex: -10,
+          zIndex: 0,
           overflow: 'hidden',
           pointerEvents: 'none'
         }}
@@ -41,7 +41,7 @@ export default function FixedBackground() {
           bottom: 0,
           backdropFilter: 'blur(1px)',
           WebkitBackdropFilter: 'blur(1px)',
-          zIndex: -9,
+          zIndex: 1,
           pointerEvents: 'none'
         }}
       />

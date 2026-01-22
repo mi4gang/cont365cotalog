@@ -190,6 +190,7 @@
     min-height: 100vh;
     position: relative;
     background-color: var(--catalog-bg);
+    z-index: 10;
     /* isolation: isolate removed - was breaking position:fixed for background */
   }
   
@@ -465,6 +466,7 @@
     min-height: 100vh;
     position: relative;
     background-color: var(--catalog-bg);
+    z-index: 10;
     /* isolation: isolate removed - was breaking position:fixed for background */
   }
   
