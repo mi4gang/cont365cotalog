@@ -3,6 +3,8 @@ import { trpc } from "@/lib/trpc";
 import CatalogHeader from "@/components/CatalogHeader";
 import ContainerCard from "@/components/ContainerCard";
 import { Search, Loader2, ChevronDown } from "lucide-react";
+import Slider from 'rc-slider';
+import 'rc-slider/assets/index.css';
 
 export default function Catalog() {
   const [sizeFilter, setSizeFilter] = useState<string>("all");
@@ -13,6 +15,7 @@ export default function Catalog() {
   const [priceDropdownOpen, setPriceDropdownOpen] = useState(false);
   const [priceFrom, setPriceFrom] = useState<string>("");
   const [priceTo, setPriceTo] = useState<string>("");
+  const [sliderValues, setSliderValues] = useState<[number, number]>([0, 1000000]);
   
   const sizeDropdownRef = useRef<HTMLDivElement>(null);
   const conditionDropdownRef = useRef<HTMLDivElement>(null);
@@ -38,6 +41,36 @@ export default function Catalog() {
       max: Math.ceil(Math.max(...prices) / 1000) * 1000
     };
   }, [containers]);
+
+  // Initialize slider values when price range changes
+  useEffect(() => {
+    if (containers && containers.length > 0) {
+      setSliderValues([priceRange.min, priceRange.max]);
+      // Only reset if user hasn't set custom values
+      if (!priceFrom || priceFrom === "0") setPriceFrom(priceRange.min.toString());
+      if (!priceTo || priceTo === "1000000") setPriceTo(priceRange.max.toString());
+    }
+  }, [priceRange, containers]);
+
+  const handleSliderChange = (values: number | number[]) => {
+    if (Array.isArray(values)) {
+      setSliderValues(values as [number, number]);
+      setPriceFrom(values[0].toString());
+      setPriceTo(values[1].toString());
+    }
+  };
+
+  const handleInputChange = (type: 'from' | 'to', value: string) => {
+    if (type === 'from') {
+      setPriceFrom(value);
+      const numValue = parseFloat(value) || priceRange.min;
+      setSliderValues([numValue, sliderValues[1]]);
+    } else {
+      setPriceTo(value);
+      const numValue = parseFloat(value) || priceRange.max;
+      setSliderValues([sliderValues[0], numValue]);
+    }
+  };
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -217,40 +250,68 @@ export default function Catalog() {
                   <ChevronDown className={`w-4 h-4 opacity-60 transition-transform flex-shrink-0 ${priceDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {priceDropdownOpen && (
-                  <div className="catalog-filter-dropdown absolute top-full left-0 mt-1 z-50 w-full sm:w-64 p-4">
-                    <div className="space-y-3">
-                      <div className="flex gap-2">
+                  <div className="catalog-filter-dropdown absolute top-full left-0 mt-1 z-50 w-[calc(100vw-2rem)] sm:w-80 p-4 sm:p-5">
+                    <div className="space-y-4">
+                      {/* Range Slider */}
+                      <div className="px-1">
+                        <Slider
+                          range
+                          min={priceRange.min}
+                          max={priceRange.max}
+                          step={1000}
+                          value={sliderValues}
+                          onChange={handleSliderChange}
+                          styles={{
+                            track: { backgroundColor: '#f97316', height: 6 },
+                            rail: { backgroundColor: '#334155', height: 6 },
+                            handle: {
+                              backgroundColor: '#f97316',
+                              borderColor: '#f97316',
+                              width: 20,
+                              height: 20,
+                              marginTop: -7,
+                              opacity: 1,
+                              boxShadow: '0 2px 8px rgba(249, 115, 22, 0.4)'
+                            }
+                          }}
+                        />
+                      </div>
+                      
+                      {/* Input Fields */}
+                      <div className="flex gap-3">
                         <div className="flex-1">
-                          <label className="text-xs text-slate-300 mb-1 block">От</label>
+                          <label className="text-xs text-slate-300 mb-1.5 block">От</label>
                           <input
                             type="number"
                             placeholder={priceRange.min.toLocaleString()}
                             value={priceFrom}
-                            onChange={(e) => setPriceFrom(e.target.value)}
-                            className="w-full px-3 py-2 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50"
+                            onChange={(e) => handleInputChange('from', e.target.value)}
+                            className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
                           />
                         </div>
                         <div className="flex-1">
-                          <label className="text-xs text-slate-300 mb-1 block">До</label>
+                          <label className="text-xs text-slate-300 mb-1.5 block">До</label>
                           <input
                             type="number"
                             placeholder={priceRange.max.toLocaleString()}
                             value={priceTo}
-                            onChange={(e) => setPriceTo(e.target.value)}
-                            className="w-full px-3 py-2 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50"
+                            onChange={(e) => handleInputChange('to', e.target.value)}
+                            className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
                           />
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      
+                      {/* Action Buttons */}
+                      <div className="flex gap-2 pt-1">
                         <button
                           onClick={handlePriceReset}
-                          className="flex-1 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 rounded text-sm text-white transition-colors"
+                          className="flex-1 px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 rounded text-sm font-medium text-white transition-colors"
                         >
                           Сбросить
                         </button>
                         <button
                           onClick={() => setPriceDropdownOpen(false)}
-                          className="flex-1 px-3 py-2 bg-orange-600/80 hover:bg-orange-600 rounded text-sm text-white transition-colors"
+                          className="flex-1 px-4 py-2.5 bg-orange-600/80 hover:bg-orange-600 rounded text-sm font-medium text-white transition-colors"
                         >
                           Применить
                         </button>
