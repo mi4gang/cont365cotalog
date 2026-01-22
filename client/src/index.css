@@ -189,7 +189,7 @@
   .catalog-page {
     min-height: 100vh;
     position: relative;
-    background-color: var(--catalog-bg);
+    /* background-color removed - was covering the fixed background image */
     z-index: 10;
     /* isolation: isolate removed - was breaking position:fixed for background */
   }
@@ -465,7 +465,7 @@
   .detail-page {
     min-height: 100vh;
     position: relative;
-    background-color: var(--catalog-bg);
+    /* background-color removed - was covering the fixed background image */
     z-index: 10;
     /* isolation: isolate removed - was breaking position:fixed for background */
   }
