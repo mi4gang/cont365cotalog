@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import CatalogHeader from "@/components/CatalogHeader";
 import ContainerCard from "@/components/ContainerCard";
@@ -10,17 +10,34 @@ export default function Catalog() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
   const [conditionDropdownOpen, setConditionDropdownOpen] = useState(false);
+  const [priceDropdownOpen, setPriceDropdownOpen] = useState(false);
+  const [priceFrom, setPriceFrom] = useState<string>("");
+  const [priceTo, setPriceTo] = useState<string>("");
   
   const sizeDropdownRef = useRef<HTMLDivElement>(null);
   const conditionDropdownRef = useRef<HTMLDivElement>(null);
+  const priceDropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: containers, isLoading } = trpc.containers.list.useQuery({
     size: sizeFilter !== "all" ? sizeFilter : undefined,
     condition: conditionFilter !== "all" ? (conditionFilter as "new" | "used") : undefined,
     search: searchQuery || undefined,
+    priceFrom: priceFrom ? parseFloat(priceFrom) : undefined,
+    priceTo: priceTo ? parseFloat(priceTo) : undefined,
   });
 
   const { data: sizes } = trpc.containers.getSizes.useQuery();
+
+  // Calculate price range from current containers
+  const priceRange = useMemo(() => {
+    if (!containers || containers.length === 0) return { min: 0, max: 1000000 };
+    const prices = containers.map(c => parseFloat(c.price || "0")).filter(p => p > 0);
+    if (prices.length === 0) return { min: 0, max: 1000000 };
+    return {
+      min: Math.floor(Math.min(...prices) / 1000) * 1000,
+      max: Math.ceil(Math.max(...prices) / 1000) * 1000
+    };
+  }, [containers]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -30,6 +47,9 @@ export default function Catalog() {
       }
       if (conditionDropdownRef.current && !conditionDropdownRef.current.contains(event.target as Node)) {
         setConditionDropdownOpen(false);
+      }
+      if (priceDropdownRef.current && !priceDropdownRef.current.contains(event.target as Node)) {
+        setPriceDropdownOpen(false);
       }
     };
 
@@ -56,6 +76,18 @@ export default function Catalog() {
   const handleConditionSelect = (condition: string) => {
     setConditionFilter(condition);
     setConditionDropdownOpen(false);
+  };
+
+  const getPriceLabel = () => {
+    if (!priceFrom && !priceTo) return "Цена";
+    if (priceFrom && priceTo) return `${parseInt(priceFrom).toLocaleString()}-${parseInt(priceTo).toLocaleString()}`;
+    if (priceFrom) return `от ${parseInt(priceFrom).toLocaleString()}`;
+    return `до ${parseInt(priceTo).toLocaleString()}`;
+  };
+
+  const handlePriceReset = () => {
+    setPriceFrom("");
+    setPriceTo("");
   };
 
   return (
@@ -107,6 +139,7 @@ export default function Catalog() {
                   onClick={() => {
                     setSizeDropdownOpen(!sizeDropdownOpen);
                     setConditionDropdownOpen(false);
+                    setPriceDropdownOpen(false);
                   }}
                 >
                   <span className="truncate text-sm sm:text-base">{getSizeLabel()}</span>
@@ -140,6 +173,7 @@ export default function Catalog() {
                   onClick={() => {
                     setConditionDropdownOpen(!conditionDropdownOpen);
                     setSizeDropdownOpen(false);
+                    setPriceDropdownOpen(false);
                   }}
                 >
                   <span className="truncate text-sm sm:text-base">{getConditionLabel()}</span>
@@ -164,6 +198,63 @@ export default function Catalog() {
                       onClick={() => handleConditionSelect("used")}
                     >
                       Б/У
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Price Filter Dropdown */}
+              <div className="relative flex-1 sm:flex-none" ref={priceDropdownRef}>
+                <button
+                  className="catalog-filter-btn w-full sm:w-auto min-w-0 sm:min-w-[140px]"
+                  onClick={() => {
+                    setPriceDropdownOpen(!priceDropdownOpen);
+                    setSizeDropdownOpen(false);
+                    setConditionDropdownOpen(false);
+                  }}
+                >
+                  <span className="truncate text-sm sm:text-base">{getPriceLabel()}</span>
+                  <ChevronDown className={`w-4 h-4 opacity-60 transition-transform flex-shrink-0 ${priceDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {priceDropdownOpen && (
+                  <div className="catalog-filter-dropdown absolute top-full left-0 mt-1 z-50 w-full sm:w-64 p-4">
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <label className="text-xs text-slate-300 mb-1 block">От</label>
+                          <input
+                            type="number"
+                            placeholder={priceRange.min.toLocaleString()}
+                            value={priceFrom}
+                            onChange={(e) => setPriceFrom(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-xs text-slate-300 mb-1 block">До</label>
+                          <input
+                            type="number"
+                            placeholder={priceRange.max.toLocaleString()}
+                            value={priceTo}
+                            onChange={(e) => setPriceTo(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handlePriceReset}
+                          className="flex-1 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 rounded text-sm text-white transition-colors"
+                        >
+                          Сбросить
+                        </button>
+                        <button
+                          onClick={() => setPriceDropdownOpen(false)}
+                          className="flex-1 px-3 py-2 bg-orange-600/80 hover:bg-orange-600 rounded text-sm text-white transition-colors"
+                        >
+                          Применить
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}

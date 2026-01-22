@@ -348,6 +348,8 @@ export const appRouter = router({
         size: z.string().optional(),
         condition: z.enum(["new", "used"]).optional(),
         search: z.string().optional(),
+        priceFrom: z.number().optional(),
+        priceTo: z.number().optional(),
       }).optional())
       .query(async ({ input }) => {
         let containers = await db.getAllContainers(true);
@@ -365,6 +367,12 @@ export const appRouter = router({
             c.name.toLowerCase().includes(searchLower) ||
             c.externalId.toLowerCase().includes(searchLower)
           );
+        }
+        if (input?.priceFrom !== undefined) {
+          containers = containers.filter(c => parseFloat(c.price || "0") >= input.priceFrom!);
+        }
+        if (input?.priceTo !== undefined) {
+          containers = containers.filter(c => parseFloat(c.price || "0") <= input.priceTo!);
         }
 
         // Get main photo for each container
