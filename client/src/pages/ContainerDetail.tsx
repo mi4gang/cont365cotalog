@@ -115,6 +115,20 @@ export default function ContainerDetail() {
 
   return (
     <div className="detail-page">
+      {/* Backdrop blur layer - Chrome requires real div instead of ::after */}
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          zIndex: 0,
+          pointerEvents: 'none'
+        }}
+      />
       <CatalogHeader />
 
       {/* Main content area */}

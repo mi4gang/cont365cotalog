@@ -60,6 +60,20 @@ export default function Catalog() {
 
   return (
     <div className="catalog-page min-h-screen">
+      {/* Backdrop blur layer - Chrome requires real div instead of ::after */}
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          zIndex: 0,
+          pointerEvents: 'none'
+        }}
+      />
       <CatalogHeader />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
