@@ -136,11 +136,11 @@ export default function Catalog() {
   };
 
   const getPriceLabel = () => {
-    if (!priceFrom && !priceTo) return "Цена";
-    // Mobile: show only currency symbol if price is set
+    // Always show "Цена" on mobile, full range on desktop
     const isMobile = window.innerWidth < 640;
-    if (isMobile && (priceFrom || priceTo)) return "₽";
+    if (isMobile) return "Цена";
     // Desktop: show full range
+    if (!priceFrom && !priceTo) return "Цена";
     if (priceFrom && priceTo) return `${parseInt(priceFrom).toLocaleString()}-${parseInt(priceTo).toLocaleString()}`;
     if (priceFrom) return `от ${parseInt(priceFrom).toLocaleString()}`;
     return `до ${parseInt(priceTo).toLocaleString()}`;
@@ -278,7 +278,7 @@ export default function Catalog() {
                   <ChevronDown className={`w-4 h-4 opacity-60 transition-transform flex-shrink-0 ${priceDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {priceDropdownOpen && (
-                  <div className="catalog-filter-dropdown absolute top-full mt-1 z-50 w-[calc(100vw-2rem)] sm:w-80 p-4 sm:p-5 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0">
+                  <div className="catalog-filter-dropdown absolute top-full mt-1 z-50 w-[calc(100vw-1.5rem)] sm:w-80 p-4 sm:p-5 left-0 right-0 sm:right-auto">
                     <div className="space-y-4">
                       {/* Range Slider */}
                       <div className="px-1">
