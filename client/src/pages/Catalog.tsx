@@ -16,6 +16,7 @@ export default function Catalog() {
   const [priceFrom, setPriceFrom] = useState<string>("");
   const [priceTo, setPriceTo] = useState<string>("");
   const [sliderValues, setSliderValues] = useState<[number, number]>([0, 1000000]);
+  const [isMobile, setIsMobile] = useState(false);
   
   // Debounced price values for query (to prevent flickering)
   const [debouncedPriceFrom, setDebouncedPriceFrom] = useState<string>("");
@@ -24,6 +25,14 @@ export default function Catalog() {
   const sizeDropdownRef = useRef<HTMLDivElement>(null);
   const conditionDropdownRef = useRef<HTMLDivElement>(null);
   const priceDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Detect mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Debounce price values to prevent flickering on slider movement
   useEffect(() => {
@@ -278,8 +287,8 @@ export default function Catalog() {
                   <ChevronDown className={`w-4 h-4 opacity-60 transition-transform flex-shrink-0 ${priceDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {/* Desktop: dropdown */}
-                {priceDropdownOpen && (
-                  <div className="catalog-filter-dropdown hidden sm:block absolute top-full mt-1 z-50 w-80 p-5 left-0">
+                {priceDropdownOpen && !isMobile && (
+                  <div className="catalog-filter-dropdown absolute top-full mt-1 z-50 w-80 p-5 left-0">
                     <div className="space-y-4">
                       {/* Range Slider */}
                       <div className="px-1">
@@ -352,8 +361,8 @@ export default function Catalog() {
             </div>
 
             {/* Mobile: accordion price filter */}
-            {priceDropdownOpen && (
-              <div className="sm:hidden w-full">
+            {priceDropdownOpen && isMobile && (
+              <div className="w-full">
                 <div className="catalog-filter-dropdown p-4">
                   <div className="space-y-4">
                     {/* Range Slider */}
