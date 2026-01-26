@@ -105,7 +105,8 @@ export default function Catalog() {
       if (conditionDropdownRef.current && !conditionDropdownRef.current.contains(event.target as Node)) {
         setConditionDropdownOpen(false);
       }
-      if (priceDropdownRef.current && !priceDropdownRef.current.contains(event.target as Node)) {
+      // Only close price dropdown on desktop when clicking outside
+      if (window.innerWidth >= 640 && priceDropdownRef.current && !priceDropdownRef.current.contains(event.target as Node)) {
         setPriceDropdownOpen(false);
       }
     };
@@ -151,6 +152,76 @@ export default function Catalog() {
     setPriceTo("");
   };
 
+  // Shared Price Filter Content
+  const PriceFilterContent = () => (
+    <div className="space-y-4">
+      {/* Range Slider */}
+      <div className="px-1">
+        <Slider
+          range
+          min={priceRange.min}
+          max={priceRange.max}
+          step={1000}
+          value={sliderValues}
+          onChange={handleSliderChange}
+          styles={{
+            track: { backgroundColor: '#f97316', height: 6 },
+            rail: { backgroundColor: '#334155', height: 6 },
+            handle: {
+              backgroundColor: '#f97316',
+              borderColor: '#f97316',
+              width: 20,
+              height: 20,
+              marginTop: -7,
+              opacity: 1,
+              boxShadow: '0 2px 8px rgba(249, 115, 22, 0.4)'
+            }
+          }}
+        />
+      </div>
+      
+      {/* Input Fields */}
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <label className="text-xs text-slate-300 mb-1.5 block">От</label>
+          <input
+            type="number"
+            placeholder={priceRange.min.toLocaleString()}
+            value={priceFrom}
+            onChange={(e) => handleInputChange('from', e.target.value)}
+            className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="text-xs text-slate-300 mb-1.5 block">До</label>
+          <input
+            type="number"
+            placeholder={priceRange.max.toLocaleString()}
+            value={priceTo}
+            onChange={(e) => handleInputChange('to', e.target.value)}
+            className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
+          />
+        </div>
+      </div>
+      
+      {/* Action Buttons */}
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={handlePriceReset}
+          className="flex-1 px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 rounded text-sm font-medium text-white transition-colors"
+        >
+          Сбросить
+        </button>
+        <button
+          onClick={() => setPriceDropdownOpen(false)}
+          className="flex-1 px-4 py-2.5 bg-orange-600/80 hover:bg-orange-600 rounded text-sm font-medium text-white transition-colors"
+        >
+          Применить
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="catalog-page min-h-screen">
       {/* Fixed background image - does NOT move on scroll */}
@@ -177,7 +248,6 @@ export default function Catalog() {
           }}
         />
       </div>
-      {/* Color overlay removed - image is already pre-blurred */}
       <CatalogHeader />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
@@ -264,7 +334,7 @@ export default function Catalog() {
                 )}
               </div>
 
-              {/* Price Filter Dropdown */}
+              {/* Price Filter Button */}
               <div className="relative flex-1 sm:flex-none" ref={priceDropdownRef}>
                 <button
                   className="catalog-filter-btn w-full sm:w-auto min-w-0 sm:min-w-[140px]"
@@ -277,78 +347,22 @@ export default function Catalog() {
                   <span className="truncate text-sm sm:text-base">{getPriceLabel()}</span>
                   <ChevronDown className={`w-4 h-4 opacity-60 transition-transform flex-shrink-0 ${priceDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
+                
+                {/* Desktop Price Dropdown */}
                 {priceDropdownOpen && (
-                  <div className="catalog-filter-dropdown absolute top-full mt-1 z-50 w-[calc(100vw-2rem)] sm:w-80 p-4 sm:p-5 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0">
-                    <div className="space-y-4">
-                      {/* Range Slider */}
-                      <div className="px-1">
-                        <Slider
-                          range
-                          min={priceRange.min}
-                          max={priceRange.max}
-                          step={1000}
-                          value={sliderValues}
-                          onChange={handleSliderChange}
-                          styles={{
-                            track: { backgroundColor: '#f97316', height: 6 },
-                            rail: { backgroundColor: '#334155', height: 6 },
-                            handle: {
-                              backgroundColor: '#f97316',
-                              borderColor: '#f97316',
-                              width: 20,
-                              height: 20,
-                              marginTop: -7,
-                              opacity: 1,
-                              boxShadow: '0 2px 8px rgba(249, 115, 22, 0.4)'
-                            }
-                          }}
-                        />
-                      </div>
-                      
-                      {/* Input Fields */}
-                      <div className="flex gap-3">
-                        <div className="flex-1">
-                          <label className="text-xs text-slate-300 mb-1.5 block">От</label>
-                          <input
-                            type="number"
-                            placeholder={priceRange.min.toLocaleString()}
-                            value={priceFrom}
-                            onChange={(e) => handleInputChange('from', e.target.value)}
-                            className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <label className="text-xs text-slate-300 mb-1.5 block">До</label>
-                          <input
-                            type="number"
-                            placeholder={priceRange.max.toLocaleString()}
-                            value={priceTo}
-                            onChange={(e) => handleInputChange('to', e.target.value)}
-                            className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
-                          />
-                        </div>
-                      </div>
-                      
-                      {/* Action Buttons */}
-                      <div className="flex gap-2 pt-1">
-                        <button
-                          onClick={handlePriceReset}
-                          className="flex-1 px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 rounded text-sm font-medium text-white transition-colors"
-                        >
-                          Сбросить
-                        </button>
-                        <button
-                          onClick={() => setPriceDropdownOpen(false)}
-                          className="flex-1 px-4 py-2.5 bg-orange-600/80 hover:bg-orange-600 rounded text-sm font-medium text-white transition-colors"
-                        >
-                          Применить
-                        </button>
-                      </div>
-                    </div>
+                  <div className="hidden sm:block catalog-filter-dropdown absolute top-full left-0 mt-1 z-50 w-80 p-5">
+                    <PriceFilterContent />
                   </div>
                 )}
               </div>
             </div>
+
+            {/* Mobile Price Accordion - Appears between filters and search */}
+            {priceDropdownOpen && (
+              <div className="sm:hidden w-full mt-1 mb-2 p-4 rounded-lg bg-slate-900/80 border border-slate-700/50 backdrop-blur-md">
+                <PriceFilterContent />
+              </div>
+            )}
 
             {/* Found count - hidden on mobile, shown on desktop */}
             <div className="catalog-found hidden sm:block ml-2">
