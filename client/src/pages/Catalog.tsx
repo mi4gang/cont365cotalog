@@ -17,7 +17,7 @@ export default function Catalog() {
   const [priceTo, setPriceTo] = useState<string>("");
   const [sliderValues, setSliderValues] = useState<[number, number]>([0, 1000000]);
   
-  // Debounced values for actual query
+  // Debounced price values for query (to prevent flickering)
   const [debouncedPriceFrom, setDebouncedPriceFrom] = useState<string>("");
   const [debouncedPriceTo, setDebouncedPriceTo] = useState<string>("");
   
@@ -25,12 +25,12 @@ export default function Catalog() {
   const conditionDropdownRef = useRef<HTMLDivElement>(null);
   const priceDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Debounce price values to prevent query spam during slider movement
+  // Debounce price values to prevent flickering on slider movement
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedPriceFrom(priceFrom);
       setDebouncedPriceTo(priceTo);
-    }, 300);
+    }, 300); // 300ms debounce
     return () => clearTimeout(timer);
   }, [priceFrom, priceTo]);
 
@@ -48,6 +48,7 @@ export default function Catalog() {
     size: sizeFilter !== "all" ? sizeFilter : undefined,
     condition: conditionFilter !== "all" ? (conditionFilter as "new" | "used") : undefined,
     search: searchQuery || undefined,
+    // NO priceFrom/priceTo here!
   });
 
   const { data: sizes } = trpc.containers.getSizes.useQuery();
@@ -61,13 +62,14 @@ export default function Catalog() {
     const maxPrice = Math.max(...prices);
     return {
       min: Math.floor(minPrice / 1000) * 1000,
-      max: maxPrice
+      max: maxPrice // Use exact max price, don't round up
     };
   }, [containersForPriceRange]);
 
   // Initialize slider values when price range changes
   useEffect(() => {
     if (containersForPriceRange && containersForPriceRange.length > 0) {
+      // Always reset to new range when filters change
       setSliderValues([priceRange.min, priceRange.max]);
       setPriceFrom(priceRange.min.toString());
       setPriceTo(priceRange.max.toString());
@@ -76,26 +78,21 @@ export default function Catalog() {
 
   const handleSliderChange = (values: number | number[]) => {
     if (Array.isArray(values)) {
-      const newValues = values as [number, number];
-      setSliderValues(newValues);
-      setPriceFrom(newValues[0].toString());
-      setPriceTo(newValues[1].toString());
+      setSliderValues(values as [number, number]);
+      setPriceFrom(values[0].toString());
+      setPriceTo(values[1].toString());
     }
   };
 
   const handleInputChange = (type: 'from' | 'to', value: string) => {
     if (type === 'from') {
       setPriceFrom(value);
-      const numValue = parseFloat(value);
-      if (!isNaN(numValue)) {
-        setSliderValues([numValue, sliderValues[1]]);
-      }
+      const numValue = parseFloat(value) || priceRange.min;
+      setSliderValues([numValue, sliderValues[1]]);
     } else {
       setPriceTo(value);
-      const numValue = parseFloat(value);
-      if (!isNaN(numValue)) {
-        setSliderValues([sliderValues[0], numValue]);
-      }
+      const numValue = parseFloat(value) || priceRange.max;
+      setSliderValues([sliderValues[0], numValue]);
     }
   };
 
@@ -108,7 +105,7 @@ export default function Catalog() {
       if (conditionDropdownRef.current && !conditionDropdownRef.current.contains(event.target as Node)) {
         setConditionDropdownOpen(false);
       }
-      if (window.innerWidth >= 640 && priceDropdownRef.current && !priceDropdownRef.current.contains(event.target as Node)) {
+      if (priceDropdownRef.current && !priceDropdownRef.current.contains(event.target as Node)) {
         setPriceDropdownOpen(false);
       }
     };
@@ -139,91 +136,24 @@ export default function Catalog() {
   };
 
   const getPriceLabel = () => {
+    // Always show "Цена" on mobile, full range on desktop
     const isMobile = window.innerWidth < 640;
     if (isMobile) return "Цена";
+    // Desktop: show full range with currency symbol
     if (!priceFrom && !priceTo) return "Цена";
-    const from = parseInt(priceFrom);
-    const to = parseInt(priceTo);
-    if (!isNaN(from) && !isNaN(to)) return `${from.toLocaleString()}-${to.toLocaleString()} ₽`;
-    if (!isNaN(from)) return `от ${from.toLocaleString()} ₽`;
-    if (!isNaN(to)) return `до ${to.toLocaleString()} ₽`;
-    return "Цена";
+    if (priceFrom && priceTo) return `${parseInt(priceFrom).toLocaleString()}-${parseInt(priceTo).toLocaleString()} ₽`;
+    if (priceFrom) return `от ${parseInt(priceFrom).toLocaleString()} ₽`;
+    return `до ${parseInt(priceTo).toLocaleString()} ₽`;
   };
 
   const handlePriceReset = () => {
-    setPriceFrom(priceRange.min.toString());
-    setPriceTo(priceRange.max.toString());
-    setSliderValues([priceRange.min, priceRange.max]);
+    setPriceFrom("");
+    setPriceTo("");
   };
-
-  const PriceFilterContent = () => (
-    <div className="space-y-4">
-      <div className="px-1">
-        <Slider
-          range
-          min={priceRange.min}
-          max={priceRange.max}
-          step={1000}
-          value={sliderValues}
-          onChange={handleSliderChange}
-          styles={{
-            track: { backgroundColor: '#f97316', height: 6 },
-            rail: { backgroundColor: '#334155', height: 6 },
-            handle: {
-              backgroundColor: '#f97316',
-              borderColor: '#f97316',
-              width: 20,
-              height: 20,
-              marginTop: -7,
-              opacity: 1,
-              boxShadow: '0 2px 8px rgba(249, 115, 22, 0.4)'
-            }
-          }}
-        />
-      </div>
-      
-      <div className="flex gap-3">
-        <div className="flex-1">
-          <label className="text-xs text-slate-300 mb-1.5 block">От</label>
-          <input
-            type="number"
-            placeholder={priceRange.min.toLocaleString()}
-            value={priceFrom}
-            onChange={(e) => handleInputChange('from', e.target.value)}
-            className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
-          />
-        </div>
-        <div className="flex-1">
-          <label className="text-xs text-slate-300 mb-1.5 block">До</label>
-          <input
-            type="number"
-            placeholder={priceRange.max.toLocaleString()}
-            value={priceTo}
-            onChange={(e) => handleInputChange('to', e.target.value)}
-            className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
-          />
-        </div>
-      </div>
-      
-      <div className="flex gap-2 pt-1">
-        <button
-          onClick={handlePriceReset}
-          className="flex-1 px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 rounded text-sm font-medium text-white transition-colors"
-        >
-          Сбросить
-        </button>
-        <button
-          onClick={() => setPriceDropdownOpen(false)}
-          className="flex-1 px-4 py-2.5 bg-orange-600/80 hover:bg-orange-600 rounded text-sm font-medium text-white transition-colors"
-        >
-          Применить
-        </button>
-      </div>
-    </div>
-  );
 
   return (
     <div className="catalog-page min-h-screen">
+      {/* Fixed background image - does NOT move on scroll */}
       <div 
         style={{
           position: 'fixed',
@@ -247,9 +177,11 @@ export default function Catalog() {
           }}
         />
       </div>
+      {/* Color overlay removed - image is already pre-blurred */}
       <CatalogHeader />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+        {/* Glassmorphism Container for entire catalog */}
         <div 
           className="catalog-glass-container p-3 sm:p-6"
           style={{
@@ -257,8 +189,11 @@ export default function Catalog() {
             WebkitBackdropFilter: 'blur(12px)'
           }}
         >
+          {/* Filters Row - responsive layout */}
           <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+            {/* Filter buttons row */}
             <div className="flex gap-2 sm:gap-3">
+              {/* Size Filter Dropdown */}
               <div className="relative flex-1 sm:flex-none" ref={sizeDropdownRef}>
                 <button
                   className="catalog-filter-btn w-full sm:w-auto min-w-0 sm:min-w-[140px]"
@@ -292,6 +227,7 @@ export default function Catalog() {
                 )}
               </div>
 
+              {/* Condition Filter Dropdown */}
               <div className="relative flex-1 sm:flex-none" ref={conditionDropdownRef}>
                 <button
                   className="catalog-filter-btn w-full sm:w-auto min-w-0 sm:min-w-[140px]"
@@ -328,6 +264,7 @@ export default function Catalog() {
                 )}
               </div>
 
+              {/* Price Filter Dropdown */}
               <div className="relative flex-1 sm:flex-none" ref={priceDropdownRef}>
                 <button
                   className="catalog-filter-btn w-full sm:w-auto min-w-0 sm:min-w-[140px]"
@@ -340,27 +277,87 @@ export default function Catalog() {
                   <span className="truncate text-sm sm:text-base">{getPriceLabel()}</span>
                   <ChevronDown className={`w-4 h-4 opacity-60 transition-transform flex-shrink-0 ${priceDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
-                
                 {priceDropdownOpen && (
-                  <div className="hidden sm:block catalog-filter-dropdown absolute top-full left-0 mt-1 z-50 w-80 p-5">
-                    <PriceFilterContent />
+                  <div className="catalog-filter-dropdown absolute top-full mt-1 z-50 w-[calc(100vw-2rem)] sm:w-80 p-4 sm:p-5 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0">
+                    <div className="space-y-4">
+                      {/* Range Slider */}
+                      <div className="px-1">
+                        <Slider
+                          range
+                          min={priceRange.min}
+                          max={priceRange.max}
+                          step={1000}
+                          value={sliderValues}
+                          onChange={handleSliderChange}
+                          styles={{
+                            track: { backgroundColor: '#f97316', height: 6 },
+                            rail: { backgroundColor: '#334155', height: 6 },
+                            handle: {
+                              backgroundColor: '#f97316',
+                              borderColor: '#f97316',
+                              width: 20,
+                              height: 20,
+                              marginTop: -7,
+                              opacity: 1,
+                              boxShadow: '0 2px 8px rgba(249, 115, 22, 0.4)'
+                            }
+                          }}
+                        />
+                      </div>
+                      
+                      {/* Input Fields */}
+                      <div className="flex gap-3">
+                        <div className="flex-1">
+                          <label className="text-xs text-slate-300 mb-1.5 block">От</label>
+                          <input
+                            type="number"
+                            placeholder={priceRange.min.toLocaleString()}
+                            value={priceFrom}
+                            onChange={(e) => handleInputChange('from', e.target.value)}
+                            className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-xs text-slate-300 mb-1.5 block">До</label>
+                          <input
+                            type="number"
+                            placeholder={priceRange.max.toLocaleString()}
+                            value={priceTo}
+                            onChange={(e) => handleInputChange('to', e.target.value)}
+                            className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Action Buttons */}
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          onClick={handlePriceReset}
+                          className="flex-1 px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 rounded text-sm font-medium text-white transition-colors"
+                        >
+                          Сбросить
+                        </button>
+                        <button
+                          onClick={() => setPriceDropdownOpen(false)}
+                          className="flex-1 px-4 py-2.5 bg-orange-600/80 hover:bg-orange-600 rounded text-sm font-medium text-white transition-colors"
+                        >
+                          Применить
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {priceDropdownOpen && (
-              <div className="sm:hidden w-full mt-1 mb-2 p-4 rounded-lg bg-slate-900/80 border border-slate-700/50 backdrop-blur-md">
-                <PriceFilterContent />
-              </div>
-            )}
-
+            {/* Found count - hidden on mobile, shown on desktop */}
             <div className="catalog-found hidden sm:block ml-2">
               Найдено: <span className="catalog-found-count">{containers?.length || 0}</span>
             </div>
 
             <div className="hidden sm:block flex-1" />
 
+            {/* Search input - full width on mobile */}
             <div className="relative w-full sm:w-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400/60" />
               <input
@@ -372,11 +369,13 @@ export default function Catalog() {
               />
             </div>
             
+            {/* Found count - shown on mobile below filters */}
             <div className="catalog-found sm:hidden text-center">
               Найдено: <span className="catalog-found-count">{containers?.length || 0}</span>
             </div>
           </div>
 
+          {/* Container Grid - responsive columns */}
           {isLoading ? (
             <div className="flex items-center justify-center py-16 sm:py-20">
               <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
