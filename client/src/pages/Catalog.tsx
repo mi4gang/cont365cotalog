@@ -361,6 +361,7 @@ export default function Catalog() {
             </div>
 
             {/* Mobile: accordion price filter */}
+            <>
             {priceDropdownOpen && isMobile && (
               <div className="w-full">
                 <div className="catalog-filter-dropdown p-4">
@@ -434,7 +435,7 @@ export default function Catalog() {
               </div>
             )}
 
-            {/* Found count - hidden on mobile, shown on desktop */
+            {/* Found count - hidden on mobile, shown on desktop */}
             <div className="catalog-found hidden sm:block ml-2">
               Найдено: <span className="catalog-found-count">{containers?.length || 0}</span>
             </div>
@@ -457,6 +458,7 @@ export default function Catalog() {
             <div className="catalog-found sm:hidden text-center">
               Найдено: <span className="catalog-found-count">{containers?.length || 0}</span>
             </div>
+            </>
           </div>
 
           {/* Container Grid - responsive columns */}
