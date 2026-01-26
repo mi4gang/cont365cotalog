@@ -61,7 +61,7 @@ export default function CatalogHeader({ showBackButton, backUrl = "/" }: Catalog
           {/* Contact Info - responsive */}
           <div className="flex items-center gap-4 sm:gap-6">
             <a 
-              href="tel:+79686922531" 
+              href="tel:+74950897207" 
               className="transition-all hover:text-white text-sm sm:text-base"
               style={{ 
                 color: 'rgb(200, 200, 200)',
@@ -71,7 +71,7 @@ export default function CatalogHeader({ showBackButton, backUrl = "/" }: Catalog
                 transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
-              +7 (968) 692-25-31
+              7 (495) 089-72-07
             </a>
             <a 
               href="https://t.me/+79686922531" 
