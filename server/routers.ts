@@ -89,13 +89,13 @@ async function parseImportFile(fileContent: string, filename: string) {
       const description = columnIndices.description !== undefined ? $(cells[columnIndices.description]).text().trim() : '';
       const inventoryText = columnIndices.inventory !== undefined ? $(cells[columnIndices.inventory]).text().trim() : '';
       
-      // Filter by inventory: if column exists, only import items with value = 1
+      // Filter by inventory: if column exists, only import items with value > 0
       // If column doesn't exist, import all items (default behavior)
       if (columnIndices.inventory !== undefined) {
         const inventoryValue = parseInt(inventoryText) || 0;
         console.log(`[Import] Row ${i}: ${productName} - inventory=${inventoryValue}`);
-        if (inventoryValue !== 1) {
-          console.log(`[Import] SKIPPING (inventory != 1): ${productName}`);
+        if (inventoryValue <= 0) {
+          console.log(`[Import] SKIPPING (inventory <= 0): ${productName}`);
           return; // Skip this row - not available
         }
       }
