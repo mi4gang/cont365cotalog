@@ -71,7 +71,7 @@ export default function CatalogHeader({ showBackButton, backUrl = "/" }: Catalog
                 transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
-              7 (495) 089-72-07
+              +7 (495) 089-72-07
             </a>
             <a 
               href="https://t.me/+79686922531" 
