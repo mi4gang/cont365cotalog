@@ -25,6 +25,7 @@ export default function Catalog() {
   const sizeDropdownRef = useRef<HTMLDivElement>(null);
   const conditionDropdownRef = useRef<HTMLDivElement>(null);
   const priceDropdownRef = useRef<HTMLDivElement>(null);
+  const priceMobileAccordionRef = useRef<HTMLDivElement>(null);
 
   // Detect mobile on mount and resize
   useEffect(() => {
@@ -115,6 +116,10 @@ export default function Catalog() {
         setConditionDropdownOpen(false);
       }
       if (priceDropdownRef.current && !priceDropdownRef.current.contains(event.target as Node)) {
+        // Also check if click is inside mobile accordion
+        if (priceMobileAccordionRef.current && priceMobileAccordionRef.current.contains(event.target as Node)) {
+          return; // Don't close if clicking inside mobile accordion
+        }
         setPriceDropdownOpen(false);
       }
     };
@@ -363,7 +368,7 @@ export default function Catalog() {
             {/* Mobile: accordion price filter */}
             <>
             {priceDropdownOpen && isMobile && (
-              <div className="w-full">
+              <div className="w-full" ref={priceMobileAccordionRef}>
                 <div className="catalog-filter-dropdown p-4">
                   <div className="space-y-4">
                     {/* Range Slider */}
