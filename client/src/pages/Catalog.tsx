@@ -351,16 +351,16 @@ export default function Catalog() {
                           value={sliderValues}
                           onChange={handleSliderChange}
                           styles={{
-                            track: { backgroundColor: '#f97316', height: 6 },
+                            track: { backgroundColor: '#c97a3a', height: 6 },
                             rail: { backgroundColor: '#334155', height: 6 },
                             handle: {
-                              backgroundColor: '#f97316',
-                              borderColor: '#f97316',
+                              backgroundColor: '#c97a3a',
+                              borderColor: '#c97a3a',
                               width: 20,
                               height: 20,
                               marginTop: -7,
                               opacity: 1,
-                              boxShadow: '0 2px 8px rgba(249, 115, 22, 0.4)'
+                              boxShadow: '0 2px 8px rgba(201, 122, 58, 0.4)'
                             }
                           }}
                         />
@@ -375,7 +375,16 @@ export default function Catalog() {
                             placeholder={priceRange.min.toLocaleString()}
                             value={priceFrom}
                             onChange={(e) => handleInputChange('from', e.target.value)}
-                            className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
+                            className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none"
+                            style={{ '--focus-border': 'rgba(201, 122, 58, 0.5)', '--focus-ring': 'rgba(201, 122, 58, 0.2)' } as React.CSSProperties}
+                            onFocus={(e) => {
+                              e.currentTarget.style.borderColor = 'rgba(201, 122, 58, 0.5)';
+                              e.currentTarget.style.boxShadow = '0 0 0 1px rgba(201, 122, 58, 0.2)';
+                            }}
+                            onBlur={(e) => {
+                              e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.3)';
+                              e.currentTarget.style.boxShadow = 'none';
+                            }}
                           />
                         </div>
                         <div className="flex-1">
@@ -385,7 +394,16 @@ export default function Catalog() {
                             placeholder={priceRange.max.toLocaleString()}
                             value={priceTo}
                             onChange={(e) => handleInputChange('to', e.target.value)}
-                            className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
+                            className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none"
+                            style={{ '--focus-border': 'rgba(201, 122, 58, 0.5)', '--focus-ring': 'rgba(201, 122, 58, 0.2)' } as React.CSSProperties}
+                            onFocus={(e) => {
+                              e.currentTarget.style.borderColor = 'rgba(201, 122, 58, 0.5)';
+                              e.currentTarget.style.boxShadow = '0 0 0 1px rgba(201, 122, 58, 0.2)';
+                            }}
+                            onBlur={(e) => {
+                              e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.3)';
+                              e.currentTarget.style.boxShadow = 'none';
+                            }}
                           />
                         </div>
                       </div>
@@ -400,7 +418,10 @@ export default function Catalog() {
                         </button>
                         <button
                           onClick={() => setPriceDropdownOpen(false)}
-                          className="flex-1 px-4 py-2.5 bg-orange-600/80 hover:bg-orange-600 rounded text-sm font-medium text-white transition-colors"
+                          className="flex-1 px-4 py-2.5 rounded text-sm font-medium text-white transition-colors"
+                          style={{ backgroundColor: 'rgba(201, 122, 58, 0.8)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(201, 122, 58)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(201, 122, 58, 0.8)'}
                         >
                           Применить
                         </button>
@@ -427,16 +448,16 @@ export default function Catalog() {
                         value={sliderValues}
                         onChange={handleSliderChange}
                         styles={{
-                          track: { backgroundColor: '#f97316', height: 6 },
+                          track: { backgroundColor: '#c97a3a', height: 6 },
                           rail: { backgroundColor: '#334155', height: 6 },
                           handle: {
-                            backgroundColor: '#f97316',
-                            borderColor: '#f97316',
+                            backgroundColor: '#c97a3a',
+                            borderColor: '#c97a3a',
                             width: 20,
                             height: 20,
                             marginTop: -7,
                             opacity: 1,
-                            boxShadow: '0 2px 8px rgba(249, 115, 22, 0.4)'
+                            boxShadow: '0 2px 8px rgba(201, 122, 58, 0.4)'
                           }
                         }}
                       />
@@ -451,7 +472,16 @@ export default function Catalog() {
                           placeholder={priceRange.min.toLocaleString()}
                           value={priceFrom}
                           onChange={(e) => handleInputChange('from', e.target.value)}
-                          className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
+                          className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none"
+                          style={{ '--focus-border': 'rgba(201, 122, 58, 0.5)', '--focus-ring': 'rgba(201, 122, 58, 0.2)' } as React.CSSProperties}
+                          onFocus={(e) => {
+                            e.currentTarget.style.borderColor = 'rgba(201, 122, 58, 0.5)';
+                            e.currentTarget.style.boxShadow = '0 0 0 1px rgba(201, 122, 58, 0.2)';
+                          }}
+                          onBlur={(e) => {
+                            e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.3)';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
                         />
                       </div>
                       <div className="flex-1">
@@ -461,7 +491,16 @@ export default function Catalog() {
                           placeholder={priceRange.max.toLocaleString()}
                           value={priceTo}
                           onChange={(e) => handleInputChange('to', e.target.value)}
-                          className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
+                          className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none"
+                          style={{ '--focus-border': 'rgba(201, 122, 58, 0.5)', '--focus-ring': 'rgba(201, 122, 58, 0.2)' } as React.CSSProperties}
+                          onFocus={(e) => {
+                            e.currentTarget.style.borderColor = 'rgba(201, 122, 58, 0.5)';
+                            e.currentTarget.style.boxShadow = '0 0 0 1px rgba(201, 122, 58, 0.2)';
+                          }}
+                          onBlur={(e) => {
+                            e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.3)';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
                         />
                       </div>
                     </div>
@@ -476,7 +515,10 @@ export default function Catalog() {
                       </button>
                       <button
                         onClick={() => setPriceDropdownOpen(false)}
-                        className="flex-1 px-4 py-2.5 bg-orange-600/80 hover:bg-orange-600 rounded text-sm font-medium text-white transition-colors"
+                        className="flex-1 px-4 py-2.5 rounded text-sm font-medium text-white transition-colors"
+                        style={{ backgroundColor: 'rgba(201, 122, 58, 0.8)' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(201, 122, 58)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(201, 122, 58, 0.8)'}
                       >
                         Применить
                       </button>
