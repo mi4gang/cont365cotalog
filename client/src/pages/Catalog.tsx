@@ -35,6 +35,47 @@ export default function Catalog() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Sync filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (sizeFilter !== "all") params.set("size", sizeFilter);
+    if (conditionFilter !== "all") params.set("condition", conditionFilter);
+    if (priceFrom) params.set("priceFrom", priceFrom);
+    if (priceTo) params.set("priceTo", priceTo);
+    if (searchQuery) params.set("search", searchQuery);
+    
+    const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+    window.history.replaceState({}, "", newUrl);
+  }, [sizeFilter, conditionFilter, priceFrom, priceTo, searchQuery]);
+
+  // Load filters from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlSize = params.get("size");
+    const urlCondition = params.get("condition");
+    const urlPriceFrom = params.get("priceFrom");
+    const urlPriceTo = params.get("priceTo");
+    const urlSearch = params.get("search");
+
+    if (urlSize) setSizeFilter(urlSize);
+    if (urlCondition) setConditionFilter(urlCondition);
+    if (urlPriceFrom) {
+      setPriceFrom(urlPriceFrom);
+      const numValue = parseFloat(urlPriceFrom);
+      if (!isNaN(numValue)) {
+        setSliderValues(prev => [numValue, prev[1]]);
+      }
+    }
+    if (urlPriceTo) {
+      setPriceTo(urlPriceTo);
+      const numValue = parseFloat(urlPriceTo);
+      if (!isNaN(numValue)) {
+        setSliderValues(prev => [prev[0], numValue]);
+      }
+    }
+    if (urlSearch) setSearchQuery(urlSearch);
+  }, []); // Run only on mount
+
   // Debounce price values to prevent flickering on slider movement
   useEffect(() => {
     const timer = setTimeout(() => {
