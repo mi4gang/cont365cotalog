@@ -120,10 +120,9 @@ export default function Catalog() {
   // Initialize slider values when price range changes
   useEffect(() => {
     if (containersForPriceRange && containersForPriceRange.length > 0) {
-      // Always reset to new range when filters change
+      // Only update slider range, don't set priceFrom/priceTo automatically
       setSliderValues([priceRange.min, priceRange.max]);
-      setPriceFrom(priceRange.min.toString());
-      setPriceTo(priceRange.max.toString());
+      // Don't set priceFrom/priceTo here - they should remain empty unless explicitly set by user or URL
     }
   }, [priceRange, containersForPriceRange]);
 
