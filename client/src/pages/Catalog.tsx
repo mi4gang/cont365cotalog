@@ -18,6 +18,7 @@ export default function Catalog() {
   const [sliderValues, setSliderValues] = useState<[number, number]>([0, 1000000]);
   const [isMobile, setIsMobile] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [sliderInitialized, setSliderInitialized] = useState(false);
   
   // Debounced price values for query (to prevent flickering)
   const [debouncedPriceFrom, setDebouncedPriceFrom] = useState<string>("");
@@ -124,13 +125,14 @@ export default function Catalog() {
     };
   }, [containersForPriceRange]);
 
-  // Initialize slider values when price range changes
+  // Initialize slider values when price range changes (only once)
   useEffect(() => {
-    // Only update slider range if not initialized from URL
-    if (containersForPriceRange && containersForPriceRange.length > 0 && !isInitialized) {
+    // Only update slider range if not initialized from URL and not yet initialized
+    if (containersForPriceRange && containersForPriceRange.length > 0 && !isInitialized && !sliderInitialized) {
       setSliderValues([priceRange.min, priceRange.max]);
+      setSliderInitialized(true);
     }
-  }, [priceRange, containersForPriceRange, isInitialized]);
+  }, [priceRange, containersForPriceRange, isInitialized, sliderInitialized]);
 
   const handleSliderChange = (values: number | number[]) => {
     if (Array.isArray(values)) {
@@ -209,6 +211,7 @@ export default function Catalog() {
   const handlePriceReset = () => {
     setPriceFrom("");
     setPriceTo("");
+    setSliderValues([priceRange.min, priceRange.max]);
   };
 
   return (
@@ -347,7 +350,7 @@ export default function Catalog() {
                           range
                           min={priceRange.min}
                           max={priceRange.max}
-                          step={1000}
+                          step={100}
                           value={sliderValues}
                           onChange={handleSliderChange}
                           styles={{
@@ -444,7 +447,7 @@ export default function Catalog() {
                         range
                         min={priceRange.min}
                         max={priceRange.max}
-                        step={1000}
+                        step={100}
                         value={sliderValues}
                         onChange={handleSliderChange}
                         styles={{
