@@ -419,9 +419,9 @@ export default function Catalog() {
                         <button
                           onClick={() => setPriceDropdownOpen(false)}
                           className="flex-1 px-4 py-2.5 rounded text-sm font-medium text-white transition-colors"
-                          style={{ backgroundColor: 'rgba(201, 122, 58, 0.8)' }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(201, 122, 58)'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(201, 122, 58, 0.8)'}
+                          style={{ backgroundColor: '#c97a3a' }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b86d34'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#c97a3a'}
                         >
                           Применить
                         </button>
@@ -516,9 +516,9 @@ export default function Catalog() {
                       <button
                         onClick={() => setPriceDropdownOpen(false)}
                         className="flex-1 px-4 py-2.5 rounded text-sm font-medium text-white transition-colors"
-                        style={{ backgroundColor: 'rgba(201, 122, 58, 0.8)' }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(201, 122, 58)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(201, 122, 58, 0.8)'}
+                        style={{ backgroundColor: '#c97a3a' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b86d34'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#c97a3a'}
                       >
                         Применить
                       </button>
