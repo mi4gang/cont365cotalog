@@ -17,6 +17,7 @@ export default function Catalog() {
   const [priceTo, setPriceTo] = useState<string>("");
   const [sliderValues, setSliderValues] = useState<[number, number]>([0, 1000000]);
   const [isMobile, setIsMobile] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   // Debounced price values for query (to prevent flickering)
   const [debouncedPriceFrom, setDebouncedPriceFrom] = useState<string>("");
@@ -74,6 +75,9 @@ export default function Catalog() {
       }
     }
     if (urlSearch) setSearchQuery(urlSearch);
+    
+    // Mark as initialized to prevent overwriting by priceRange useEffect
+    setIsInitialized(true);
   }, []); // Run only on mount
 
   // Debounce price values to prevent flickering on slider movement
@@ -119,12 +123,11 @@ export default function Catalog() {
 
   // Initialize slider values when price range changes
   useEffect(() => {
-    if (containersForPriceRange && containersForPriceRange.length > 0) {
-      // Only update slider range, don't set priceFrom/priceTo automatically
+    // Only update slider range if not initialized from URL
+    if (containersForPriceRange && containersForPriceRange.length > 0 && !isInitialized) {
       setSliderValues([priceRange.min, priceRange.max]);
-      // Don't set priceFrom/priceTo here - they should remain empty unless explicitly set by user or URL
     }
-  }, [priceRange, containersForPriceRange]);
+  }, [priceRange, containersForPriceRange, isInitialized]);
 
   const handleSliderChange = (values: number | number[]) => {
     if (Array.isArray(values)) {
