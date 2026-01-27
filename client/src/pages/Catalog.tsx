@@ -36,8 +36,11 @@ export default function Catalog() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Sync filters to URL
+  // Sync filters to URL (only after initialization)
   useEffect(() => {
+    // Don't update URL until filters are loaded from URL
+    if (!isInitialized) return;
+    
     const params = new URLSearchParams();
     if (sizeFilter !== "all") params.set("size", sizeFilter);
     if (conditionFilter !== "all") params.set("condition", conditionFilter);
@@ -47,7 +50,7 @@ export default function Catalog() {
     
     const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
     window.history.replaceState({}, "", newUrl);
-  }, [sizeFilter, conditionFilter, priceFrom, priceTo, searchQuery]);
+  }, [sizeFilter, conditionFilter, priceFrom, priceTo, searchQuery, isInitialized]);
 
   // Load filters from URL on mount
   useEffect(() => {
