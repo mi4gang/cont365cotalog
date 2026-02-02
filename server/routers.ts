@@ -184,44 +184,61 @@ async function createAdminToken(adminId: number, username: string): Promise<stri
 async function verifyAdminToken(token: string): Promise<{ adminId: number; username: string } | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
-    if (payload.type !== "admin") return null;
+    if (payload.type !== "admin") {
+      console.error('[Auth] Invalid token type:', payload.type);
+      return null;
+    }
     return { adminId: payload.adminId as number, username: payload.username as string };
-  } catch {
+  } catch (err: any) {
+    console.error('[Auth] JWT verification failed:', err.message);
     return null;
   }
 }
 
 // Admin procedure - checks admin authentication
 const adminProcedure = publicProcedure.use(async ({ ctx, next }) => {
+  console.log('[Auth] Admin procedure check started');
   // Check cookie first, then Authorization header
   let token = ctx.req.cookies?.[ADMIN_COOKIE_NAME];
   if (!token) {
     const authHeader = ctx.req.headers.authorization;
     if (authHeader?.startsWith('Bearer ')) {
       token = authHeader.slice(7);
+      console.log('[Auth] Token found in Authorization header');
     }
+  } else {
+    console.log('[Auth] Token found in cookies');
   }
   
   if (!token) {
+    console.warn('[Auth] No token provided');
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Admin authentication required" });
   }
 
   const tokenData = await verifyAdminToken(token);
   if (!tokenData) {
+    console.warn('[Auth] Token verification failed');
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid or expired admin session" });
   }
 
-  const adminUser = await db.getAdminUserById(tokenData.adminId);
-  if (!adminUser) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Admin user not found" });
-  }
+  try {
+    const adminUser = await db.getAdminUserById(tokenData.adminId);
+    if (!adminUser) {
+      console.warn('[Auth] Admin user not found in DB for ID:', tokenData.adminId);
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Admin user not found" });
+    }
 
-  return next({
-    ctx: {
-      ...ctx,
-      adminUser,
-    },
-  });
+    console.log('[Auth] Admin authenticated successfully:', adminUser.username);
+    return next({
+      ctx: {
+        ...ctx,
+        adminUser,
+      },
+    });
+  } catch (err: any) {
+    console.error('[Auth] DB error during admin check:', err.message);
+    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error during authentication" });
+  }
 });
 
 export const appRouter = router({
@@ -236,13 +253,17 @@ export const appRouter = router({
         password: z.string().min(1),
       }))
       .mutation(async ({ input, ctx }) => {
-        const adminUser = await db.verifyAdminPassword(input.username, input.password);
-        
-        if (!adminUser) {
-          throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid username or password" });
-        }
+        console.log('[Auth] Login attempt for username:', input.username);
+        try {
+          const adminUser = await db.verifyAdminPassword(input.username, input.password);
+          
+          if (!adminUser) {
+            console.warn('[Auth] Login failed: Invalid credentials for', input.username);
+            throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid username or password" });
+          }
 
-        const token = await createAdminToken(adminUser.id, adminUser.username);
+          console.log('[Auth] Login successful for', input.username);
+          const token = await createAdminToken(adminUser.id, adminUser.username);
         
         // Set cookie - httpOnly: false for preview mode compatibility
         // In production with custom domain, httpOnly: true is recommended
@@ -263,6 +284,10 @@ export const appRouter = router({
             name: adminUser.name,
           },
         };
+        } catch (err: any) {
+          console.error('[Auth] Login error:', err.message);
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database error during login" });
+        }
       }),
 
     // Logout
