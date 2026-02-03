@@ -12,7 +12,36 @@ import {
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
-let _connection: mysql.Connection | null = null;
+let _pool: mysql.Pool | null = null;
+
+// Parse DATABASE_URL and add SSL support
+function getDatabaseConfig() {
+  if (!process.env.DATABASE_URL) return null;
+  
+  try {
+    const url = new URL(process.env.DATABASE_URL);
+    const config: mysql.PoolOptions = {
+      host: url.hostname,
+      port: parseInt(url.port) || 3306,
+      user: url.username,
+      password: url.password,
+      database: url.pathname.slice(1),
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0,
+      // Add SSL support for secure connections
+      ssl: {
+        rejectUnauthorized: false
+      }
+    };
+    return config;
+  } catch (error) {
+    console.error('[Database] Failed to parse DATABASE_URL:', error);
+    return null;
+  }
+}
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
@@ -29,22 +58,47 @@ export async function getDb() {
   return _db;
 }
 
-export async function getConnection() {
-  if (!_connection && process.env.DATABASE_URL) {
-    try {
-      _connection = await mysql.createConnection(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to create connection:", error);
-      _connection = null;
+export function getPool(): mysql.Pool | null {
+  if (!_pool) {
+    const config = getDatabaseConfig();
+    if (config) {
+      try {
+        _pool = mysql.createPool(config);
+        console.log('[Database] Connection pool created successfully');
+      } catch (error) {
+        console.error('[Database] Failed to create pool:', error);
+        _pool = null;
+      }
     }
   }
-  return _connection;
+  return _pool;
+}
+
+export async function getConnection(): Promise<mysql.PoolConnection | null> {
+  const pool = getPool();
+  if (!pool) {
+    console.error('[Database] Pool not available');
+    return null;
+  }
+  
+  try {
+    const connection = await pool.getConnection();
+    return connection;
+  } catch (error) {
+    console.error('[Database] Failed to get connection from pool:', error);
+    return null;
+  }
 }
 
 export async function execute(sql: string, params?: any[]) {
   const conn = await getConnection();
   if (!conn) throw new Error('Database connection not available');
-  return conn.execute(sql, params);
+  try {
+    const result = await conn.execute(sql, params);
+    return result;
+  } finally {
+    conn.release();
+  }
 }
 
 // ==================== Admin Users ====================
