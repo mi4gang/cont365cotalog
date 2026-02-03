@@ -15,7 +15,6 @@ let _pool: mysql.Pool | null = null;
 
 /**
  * Creates or returns the existing MySQL connection pool.
- * We use the connection string directly to ensure all parameters (like SSL) are preserved.
  */
 export function getPool(): mysql.Pool | null {
   if (!_pool) {
@@ -130,6 +129,14 @@ export async function verifyAdminPassword(username: string, password: string): P
   return user;
 }
 
+export async function updateAdminPassword(userId: number, newPassword: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await db.update(adminUsers).set({ passwordHash }).where(eq(adminUsers.id, userId));
+  return true;
+}
+
 // ==================== Containers ====================
 
 export async function getAllContainers(activeOnly: boolean = true): Promise<Container[]> {
@@ -139,6 +146,13 @@ export async function getAllContainers(activeOnly: boolean = true): Promise<Cont
     return db.select().from(containers).where(eq(containers.isActive, true)).orderBy(containers.id);
   }
   return db.select().from(containers).orderBy(containers.id);
+}
+
+export async function getContainerById(id: number): Promise<Container | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(containers).where(eq(containers.id, id)).limit(1);
+  return result[0];
 }
 
 export async function getContainerByExternalId(externalId: string): Promise<Container | undefined> {
@@ -210,6 +224,23 @@ export async function getPhotosByContainerId(containerId: number): Promise<Conta
   return db.select().from(containerPhotos).where(eq(containerPhotos.containerId, containerId)).orderBy(containerPhotos.displayOrder);
 }
 
+export async function getMainPhotoByContainerId(containerId: number): Promise<ContainerPhoto | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  let result = await db.select()
+    .from(containerPhotos)
+    .where(and(eq(containerPhotos.containerId, containerId), eq(containerPhotos.isMain, true)))
+    .limit(1);
+  if (result.length === 0) {
+    result = await db.select()
+      .from(containerPhotos)
+      .where(eq(containerPhotos.containerId, containerId))
+      .orderBy(containerPhotos.displayOrder)
+      .limit(1);
+  }
+  return result[0];
+}
+
 export async function addContainerPhoto(data: InsertContainerPhoto): Promise<ContainerPhoto | null> {
   const db = await getDb();
   if (!db) return null;
@@ -222,6 +253,16 @@ export async function updatePhotoOrder(photoId: number, displayOrder: number): P
   const db = await getDb();
   if (!db) return false;
   await db.update(containerPhotos).set({ displayOrder }).where(eq(containerPhotos.id, photoId));
+  return true;
+}
+
+export async function setMainPhoto(containerId: number, photoId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  await db.transaction(async (tx) => {
+    await tx.update(containerPhotos).set({ isMain: false }).where(eq(containerPhotos.containerId, containerId));
+    await tx.update(containerPhotos).set({ isMain: true }).where(eq(containerPhotos.id, photoId));
+  });
   return true;
 }
 
