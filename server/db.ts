@@ -9,71 +9,66 @@ import {
   containerPhotos, InsertContainerPhoto, ContainerPhoto,
   importHistory, InsertImportHistory
 } from "../drizzle/schema";
-import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _pool: mysql.Pool | null = null;
 
-// Parse DATABASE_URL and add SSL support
-function getDatabaseConfig() {
-  if (!process.env.DATABASE_URL) return null;
-  
-  try {
-    const url = new URL(process.env.DATABASE_URL);
-    const config: mysql.PoolOptions = {
-      host: url.hostname,
-      port: parseInt(url.port) || 3306,
-      user: url.username,
-      password: url.password,
-      database: url.pathname.slice(1),
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-      enableKeepAlive: true,
-      keepAliveInitialDelay: 0,
-      // Add SSL support for secure connections
-      ssl: {
-        rejectUnauthorized: false
-      }
-    };
-    return config;
-  } catch (error) {
-    console.error('[Database] Failed to parse DATABASE_URL:', error);
-    return null;
-  }
-}
-
-export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL, {
-        mode: 'default',
-        casing: 'snake_case'
-      });
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
-  }
-  return _db;
-}
-
+/**
+ * Creates or returns the existing MySQL connection pool.
+ * We use the connection string directly to ensure all parameters (like SSL) are preserved.
+ */
 export function getPool(): mysql.Pool | null {
   if (!_pool) {
-    const config = getDatabaseConfig();
-    if (config) {
-      try {
-        _pool = mysql.createPool(config);
-        console.log('[Database] Connection pool created successfully');
-      } catch (error) {
-        console.error('[Database] Failed to create pool:', error);
-        _pool = null;
-      }
+    if (!process.env.DATABASE_URL) {
+      console.error('[Database] DATABASE_URL is not defined');
+      return null;
+    }
+
+    try {
+      // Create pool using the connection string directly.
+      // We append SSL settings if they are not already in the URL to ensure secure transport.
+      let connectionString = process.env.DATABASE_URL;
+      
+      _pool = mysql.createPool({
+        uri: connectionString,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 0,
+        // Explicitly enforce SSL as Timeweb Cloud requires it
+        ssl: {
+          rejectUnauthorized: false
+        }
+      });
+      console.log('[Database] Connection pool created successfully');
+    } catch (error) {
+      console.error('[Database] Failed to create pool:', error);
+      _pool = null;
     }
   }
   return _pool;
 }
 
+/**
+ * Returns a Drizzle ORM instance using the connection pool.
+ */
+export async function getDb() {
+  if (!_db) {
+    const pool = getPool();
+    if (pool) {
+      _db = drizzle(pool, {
+        mode: 'default',
+        casing: 'snake_case'
+      });
+    }
+  }
+  return _db;
+}
+
+/**
+ * Gets a single connection from the pool.
+ */
 export async function getConnection(): Promise<mysql.PoolConnection | null> {
   const pool = getPool();
   if (!pool) {
@@ -90,14 +85,20 @@ export async function getConnection(): Promise<mysql.PoolConnection | null> {
   }
 }
 
+/**
+ * Executes a raw SQL query using the pool.
+ */
 export async function execute(sql: string, params?: any[]) {
-  const conn = await getConnection();
-  if (!conn) throw new Error('Database connection not available');
+  const pool = getPool();
+  if (!pool) throw new Error('Database connection pool not available');
+  
   try {
-    const result = await conn.execute(sql, params);
+    // pool.execute automatically handles getting and releasing a connection
+    const result = await pool.execute(sql, params);
     return result;
-  } finally {
-    conn.release();
+  } catch (error) {
+    console.error('[Database] Execution error:', error);
+    throw error;
   }
 }
 
@@ -123,59 +124,72 @@ export async function getAdminUserByUsername(username: string): Promise<AdminUse
   const db = await getDb();
   if (!db) return undefined;
 
-  // Use raw SQL to avoid Drizzle ORM quoting issues with MySQL
-  const result = await execute(`SELECT * FROM \`admin_users\` WHERE \`username\` = ? LIMIT 1`, [username]);
-  return (result as any)[0]?.[0] as AdminUser | undefined;
+  try {
+    const result = await execute(`SELECT * FROM \`admin_users\` WHERE \`username\` = ? LIMIT 1`, [username]);
+    return (result as any)[0]?.[0] as AdminUser | undefined;
+  } catch (error) {
+    console.error('[Auth] Error fetching user by username:', error);
+    return undefined;
+  }
 }
 
 export async function getAdminUserById(id: number): Promise<AdminUser | undefined> {
   const db = await getDb();
   if (!db) return undefined;
 
-  // Use raw SQL to avoid Drizzle ORM quoting issues with MySQL
-  const result = await execute(`SELECT * FROM \`admin_users\` WHERE \`id\` = ? LIMIT 1`, [id]);
-  return (result as any)[0]?.[0] as AdminUser | undefined;
+  try {
+    const result = await execute(`SELECT * FROM \`admin_users\` WHERE \`id\` = ? LIMIT 1`, [id]);
+    return (result as any)[0]?.[0] as AdminUser | undefined;
+  } catch (error) {
+    console.error('[Auth] Error fetching user by ID:', error);
+    return undefined;
+  }
 }
 
 export async function verifyAdminPassword(username: string, password: string): Promise<AdminUser | null> {
   console.log('[Admin Auth] Attempting login for username:', username);
-  const user = await getAdminUserByUsername(username);
-  if (!user) {
-    console.log('[Admin Auth] ❌ User not found');
-    return null;
-  }
-
-  console.log('[Admin Auth] User found, hash length:', user.passwordHash?.length);
-  console.log('[Admin Auth] Hash preview:', user.passwordHash?.substring(0, 20) + '...');
-  console.log('[Admin Auth] Password to compare:', password);
   
-  const isValid = await bcrypt.compare(password, user.passwordHash);
-  console.log('[Admin Auth] Password comparison result:', isValid);
-  
-  if (!isValid) {
-    console.log('[Admin Auth] ❌ Password mismatch');
-    return null;
-  }
+  try {
+    const user = await getAdminUserByUsername(username);
+    if (!user) {
+      console.log('[Admin Auth] ❌ User not found');
+      return null;
+    }
 
-  // Update last signed in using raw SQL
-  const db = await getDb();
-  if (db) {
+    console.log('[Admin Auth] User found, hash length:', user.passwordHash?.length);
+    
+    const isValid = await bcrypt.compare(password, user.passwordHash);
+    console.log('[Admin Auth] Password comparison result:', isValid);
+    
+    if (!isValid) {
+      console.log('[Admin Auth] ❌ Password mismatch');
+      return null;
+    }
+
+    // Update last signed in
     await execute(`UPDATE \`admin_users\` SET \`lastSignedIn\` = NOW() WHERE \`id\` = ?`, [user.id]);
-  }
 
-  return user;
+    return user;
+  } catch (error) {
+    console.error('[Admin Auth] Login error:', error);
+    return null;
+  }
 }
 
 export async function updateAdminPassword(userId: number, newPassword: string): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
 
-  const passwordHash = await bcrypt.hash(newPassword, 12);
-  await db.update(adminUsers)
-    .set({ passwordHash })
-    .where(eq(adminUsers.id, userId));
-  
-  return true;
+  try {
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await db.update(adminUsers)
+      .set({ passwordHash })
+      .where(eq(adminUsers.id, userId));
+    return true;
+  } catch (error) {
+    console.error('[Database] Error updating password:', error);
+    return false;
+  }
 }
 
 // ==================== Containers ====================
@@ -184,81 +198,97 @@ export async function getAllContainers(activeOnly: boolean = true): Promise<Cont
   const db = await getDb();
   if (!db) return [];
 
-  if (activeOnly) {
-    return db.select().from(containers).where(eq(containers.isActive, true)).orderBy(containers.id);
+  try {
+    if (activeOnly) {
+      return db.select().from(containers).where(eq(containers.isActive, true)).orderBy(containers.id);
+    }
+    return db.select().from(containers).orderBy(containers.id);
+  } catch (error) {
+    console.error('[Database] Error fetching containers:', error);
+    return [];
   }
-  return db.select().from(containers).orderBy(containers.id);
 }
 
 export async function getContainerById(id: number): Promise<Container | undefined> {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db.select().from(containers).where(eq(containers.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  try {
+    const result = await db.select().from(containers).where(eq(containers.id, id)).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  } catch (error) {
+    console.error('[Database] Error fetching container by ID:', error);
+    return undefined;
+  }
 }
 
 export async function getContainerByExternalId(externalId: string): Promise<Container | undefined> {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db.select().from(containers).where(eq(containers.externalId, externalId)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  try {
+    const result = await db.select().from(containers).where(eq(containers.externalId, externalId)).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  } catch (error) {
+    console.error('[Database] Error fetching container by external ID:', error);
+    return undefined;
+  }
 }
 
 export async function createContainer(data: InsertContainer): Promise<Container | null> {
   const db = await getDb();
   if (!db) return null;
 
-  await db.insert(containers).values(data);
-  const result = await getContainerByExternalId(data.externalId);
-  return result ?? null;
+  try {
+    await db.insert(containers).values(data);
+    const result = await getContainerByExternalId(data.externalId);
+    return result ?? null;
+  } catch (error) {
+    console.error('[Database] Error creating container:', error);
+    return null;
+  }
 }
 
 export async function updateContainer(id: number, data: Partial<InsertContainer>): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
 
-  await db.update(containers).set(data).where(eq(containers.id, id));
-  return true;
+  try {
+    await db.update(containers).set(data).where(eq(containers.id, id));
+    return true;
+  } catch (error) {
+    console.error('[Database] Error updating container:', error);
+    return false;
+  }
 }
 
 export async function deactivateContainersNotIn(externalIds: string[]): Promise<number> {
   console.log('[DB] deactivateContainersNotIn called with', externalIds.length, 'IDs');
-  console.log('[DB] IDs to keep active:', externalIds);
   
   const db = await getDb();
-  if (!db) {
-    console.log('[DB] Database not available!');
-    return 0;
-  }
+  if (!db) return 0;
 
-  if (externalIds.length === 0) {
-    console.log('[DB] No IDs provided, deactivating ALL containers');
-    // Deactivate all
-    const result = await db.update(containers)
+  try {
+    if (externalIds.length === 0) {
+      await db.update(containers).set({ isActive: false }).where(eq(containers.isActive, true));
+      return 0;
+    }
+
+    const activeContainers = await db.select().from(containers).where(eq(containers.isActive, true));
+    const toDeactivate = activeContainers.filter(c => !externalIds.includes(c.externalId));
+
+    await db.update(containers)
       .set({ isActive: false })
-      .where(eq(containers.isActive, true));
+      .where(and(
+        eq(containers.isActive, true),
+        sql`${containers.externalId} NOT IN (${sql.join(externalIds.map(id => sql`${id}`), sql`, `)})`
+      ));
+    
+    return toDeactivate.length;
+  } catch (error) {
+    console.error('[Database] Error deactivating containers:', error);
     return 0;
   }
-
-  // Get current active containers for logging
-  const activeContainers = await db.select().from(containers).where(eq(containers.isActive, true));
-  console.log('[DB] Currently active containers:', activeContainers.map(c => c.externalId));
-  
-  // Find which ones will be deactivated
-  const toDeactivate = activeContainers.filter(c => !externalIds.includes(c.externalId));
-  console.log('[DB] Containers to DEACTIVATE:', toDeactivate.map(c => c.externalId));
-
-  await db.update(containers)
-    .set({ isActive: false })
-    .where(and(
-      eq(containers.isActive, true),
-      sql`${containers.externalId} NOT IN (${sql.join(externalIds.map(id => sql`${id}`), sql`, `)})`
-    ));
-  
-  console.log('[DB] Deactivation query executed');
-  return toDeactivate.length;
 }
 
 // ==================== Container Photos ====================
@@ -267,217 +297,94 @@ export async function getPhotosByContainerId(containerId: number): Promise<Conta
   const db = await getDb();
   if (!db) return [];
 
-  return db.select()
-    .from(containerPhotos)
-    .where(eq(containerPhotos.containerId, containerId))
-    .orderBy(containerPhotos.displayOrder);
+  try {
+    return db.select()
+      .from(containerPhotos)
+      .where(eq(containerPhotos.containerId, containerId))
+      .orderBy(containerPhotos.displayOrder);
+  } catch (error) {
+    console.error('[Database] Error fetching photos:', error);
+    return [];
+  }
 }
 
 export async function getMainPhotoByContainerId(containerId: number): Promise<ContainerPhoto | undefined> {
   const db = await getDb();
   if (!db) return undefined;
 
-  // First try to get the main photo
-  let result = await db.select()
-    .from(containerPhotos)
-    .where(and(
-      eq(containerPhotos.containerId, containerId),
-      eq(containerPhotos.isMain, true)
-    ))
-    .limit(1);
-
-  // If no main photo, get the first one by display order
-  if (result.length === 0) {
-    result = await db.select()
+  try {
+    let result = await db.select()
       .from(containerPhotos)
-      .where(eq(containerPhotos.containerId, containerId))
-      .orderBy(containerPhotos.displayOrder)
+      .where(and(
+        eq(containerPhotos.containerId, containerId),
+        eq(containerPhotos.isMain, true)
+      ))
       .limit(1);
-  }
 
-  return result.length > 0 ? result[0] : undefined;
+    if (result.length === 0) {
+      result = await db.select()
+        .from(containerPhotos)
+        .where(eq(containerPhotos.containerId, containerId))
+        .orderBy(containerPhotos.displayOrder)
+        .limit(1);
+    }
+
+    return result.length > 0 ? result[0] : undefined;
+  } catch (error) {
+    console.error('[Database] Error fetching main photo:', error);
+    return undefined;
+  }
 }
 
 export async function addContainerPhoto(data: InsertContainerPhoto): Promise<ContainerPhoto | null> {
   const db = await getDb();
   if (!db) return null;
 
-  const [result] = await db.insert(containerPhotos).values(data).$returningId();
-  
-  const photos = await db.select()
-    .from(containerPhotos)
-    .where(eq(containerPhotos.id, result.id))
-    .limit(1);
-  
-  return photos.length > 0 ? photos[0] : null;
+  try {
+    const [result] = await db.insert(containerPhotos).values(data).$returningId();
+    const photos = await db.select()
+      .from(containerPhotos)
+      .where(eq(containerPhotos.id, result.id))
+      .limit(1);
+    return photos.length > 0 ? photos[0] : null;
+  } catch (error) {
+    console.error('[Database] Error adding photo:', error);
+    return null;
+  }
 }
 
 export async function updatePhotoOrder(photoId: number, displayOrder: number): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
 
-  await db.update(containerPhotos)
-    .set({ displayOrder })
-    .where(eq(containerPhotos.id, photoId));
-  
-  return true;
+  try {
+    await db.update(containerPhotos)
+      .set({ displayOrder })
+      .where(eq(containerPhotos.id, photoId));
+    return true;
+  } catch (error) {
+    console.error('[Database] Error updating photo order:', error);
+    return false;
+  }
 }
 
 export async function setMainPhoto(containerId: number, photoId: number): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
 
-  // First, unset all main photos for this container
-  await db.update(containerPhotos)
-    .set({ isMain: false })
-    .where(eq(containerPhotos.containerId, containerId));
-
-  // Then set the new main photo
-  await db.update(containerPhotos)
-    .set({ isMain: true })
-    .where(eq(containerPhotos.id, photoId));
-
-  return true;
-}
-
-export async function deletePhotosByContainerId(containerId: number): Promise<boolean> {
-  const db = await getDb();
-  if (!db) return false;
-
-  await db.delete(containerPhotos).where(eq(containerPhotos.containerId, containerId));
-  return true;
-}
-
-export async function deletePhoto(photoId: number): Promise<boolean> {
-  const db = await getDb();
-  if (!db) return false;
-
-  await db.delete(containerPhotos).where(eq(containerPhotos.id, photoId));
-  return true;
-}
-
-// ==================== Import History ====================
-
-export async function createImportRecord(data: InsertImportHistory): Promise<number | null> {
-  const db = await getDb();
-  if (!db) return null;
-
-  const [result] = await db.insert(importHistory).values(data).$returningId();
-  return result.id;
-}
-
-export async function updateImportRecord(id: number, data: Partial<InsertImportHistory>): Promise<boolean> {
-  const db = await getDb();
-  if (!db) return false;
-
-  await db.update(importHistory).set(data).where(eq(importHistory.id, id));
-  return true;
-}
-
-export async function getImportHistory(limit: number = 20) {
-  const db = await getDb();
-  if (!db) return [];
-
-  return db.select()
-    .from(importHistory)
-    .orderBy(sql`${importHistory.createdAt} DESC`)
-    .limit(limit);
-}
-
-// ==================== Original User Functions (for Manus OAuth compatibility) ====================
-
-export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
-
   try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
-
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
+    await db.transaction(async (tx) => {
+      await tx.update(containerPhotos)
+        .set({ isMain: false })
+        .where(eq(containerPhotos.containerId, containerId));
+      
+      await tx.update(containerPhotos)
+        .set({ isMain: true })
+        .where(eq(containerPhotos.id, photoId));
     });
+    return true;
   } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
+    console.error('[Database] Error setting main photo:', error);
+    return false;
   }
-}
-
-export async function getUserByOpenId(openId: string) {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
-}
-
-
-// ==================== Container Deletion ====================
-
-export async function deleteContainer(containerId: number): Promise<boolean> {
-  const db = await getDb();
-  if (!db) return false;
-
-  // Delete all photos first
-  await db.delete(containerPhotos).where(eq(containerPhotos.containerId, containerId));
-  
-  // Delete container
-  await db.delete(containers).where(eq(containers.id, containerId));
-  
-  return true;
-}
-
-export async function deleteAllContainers(): Promise<boolean> {
-  const db = await getDb();
-  if (!db) return false;
-
-  // Delete all photos
-  await db.delete(containerPhotos);
-  
-  // Delete all containers
-  await db.delete(containers);
-  
-  return true;
 }
