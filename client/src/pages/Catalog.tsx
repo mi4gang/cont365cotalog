@@ -7,9 +7,9 @@ import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
 
 export default function Catalog() {
-  const [sizeFilter, setSizeFilter] = useState<string>("all");
+  const [sizeFilters, setSizeFilters] = useState<string[]>([]);
   const [conditionFilter, setConditionFilter] = useState<string>("all");
-  const [terminalFilter, setTerminalFilter] = useState<string>("all");
+  const [terminalFilters, setTerminalFilters] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
   const [conditionDropdownOpen, setConditionDropdownOpen] = useState(false);
@@ -46,30 +46,30 @@ export default function Catalog() {
     if (!isInitialized) return;
     
     const params = new URLSearchParams();
-    if (sizeFilter !== "all") params.set("size", sizeFilter);
+    if (sizeFilters.length > 0) params.set("sizes", sizeFilters.join(","));
     if (conditionFilter !== "all") params.set("condition", conditionFilter);
-    if (terminalFilter !== "all") params.set("terminal", terminalFilter);
+    if (terminalFilters.length > 0) params.set("terminals", terminalFilters.join(","));
     if (priceFrom) params.set("priceFrom", priceFrom);
     if (priceTo) params.set("priceTo", priceTo);
     if (searchQuery) params.set("search", searchQuery);
     
     const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
     window.history.replaceState({}, "", newUrl);
-  }, [sizeFilter, conditionFilter, terminalFilter, priceFrom, priceTo, searchQuery, isInitialized]);
+  }, [sizeFilters, conditionFilter, terminalFilters, priceFrom, priceTo, searchQuery, isInitialized]);
 
   // Load filters from URL on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const urlSize = params.get("size");
+    const urlSizes = params.get("sizes");
     const urlCondition = params.get("condition");
-    const urlTerminal = params.get("terminal");
+    const urlTerminals = params.get("terminals");
     const urlPriceFrom = params.get("priceFrom");
     const urlPriceTo = params.get("priceTo");
     const urlSearch = params.get("search");
 
-    if (urlSize) setSizeFilter(urlSize);
+    if (urlSizes) setSizeFilters(urlSizes.split(","));
     if (urlCondition) setConditionFilter(urlCondition);
-    if (urlTerminal) setTerminalFilter(urlTerminal);
+    if (urlTerminals) setTerminalFilters(urlTerminals.split(","));
     if (urlPriceFrom) {
       setPriceFrom(urlPriceFrom);
       const numValue = parseFloat(urlPriceFrom);
@@ -101,9 +101,9 @@ export default function Catalog() {
 
   // Query for displayed containers (with all filters including price)
   const { data: containers, isLoading } = trpc.containers.list.useQuery({
-    size: sizeFilter !== "all" ? sizeFilter : undefined,
+    sizes: sizeFilters.length > 0 ? sizeFilters : undefined,
     condition: conditionFilter !== "all" ? (conditionFilter as "new" | "used") : undefined,
-    terminal: terminalFilter !== "all" ? terminalFilter : undefined,
+    terminals: terminalFilters.length > 0 ? terminalFilters : undefined,
     search: searchQuery || undefined,
     priceFrom: debouncedPriceFrom ? parseFloat(debouncedPriceFrom) : undefined,
     priceTo: debouncedPriceTo ? parseFloat(debouncedPriceTo) : undefined,
@@ -111,9 +111,9 @@ export default function Catalog() {
 
   // Separate query for price range calculation (WITHOUT price filter)
   const { data: containersForPriceRange } = trpc.containers.list.useQuery({
-    size: sizeFilter !== "all" ? sizeFilter : undefined,
+    sizes: sizeFilters.length > 0 ? sizeFilters : undefined,
     condition: conditionFilter !== "all" ? (conditionFilter as "new" | "used") : undefined,
-    terminal: terminalFilter !== "all" ? terminalFilter : undefined,
+    terminals: terminalFilters.length > 0 ? terminalFilters : undefined,
     search: searchQuery || undefined,
     // NO priceFrom/priceTo here!
   });
@@ -189,8 +189,9 @@ export default function Catalog() {
   }, []);
 
   const getSizeLabel = () => {
-    if (sizeFilter === "all") return "Размер";
-    return sizeFilter;
+    if (sizeFilters.length === 0) return "Размер";
+    if (sizeFilters.length === 1) return sizeFilters[0];
+    return `Размер (${sizeFilters.length})`;
   };
 
   const getConditionLabel = () => {
@@ -200,8 +201,16 @@ export default function Catalog() {
   };
 
   const handleSizeSelect = (size: string) => {
-    setSizeFilter(size);
-    setSizeDropdownOpen(false);
+    setSizeFilters(prev => {
+      if (prev.includes(size)) {
+        // Remove if already selected
+        return prev.filter(s => s !== size);
+      } else {
+        // Add if not selected
+        return [...prev, size];
+      }
+    });
+    // Keep dropdown open for multiple selection
   };
 
   const handleConditionSelect = (condition: string) => {
@@ -210,13 +219,22 @@ export default function Catalog() {
   };
 
   const getTerminalLabel = () => {
-    if (terminalFilter === "all") return "Локация";
-    return terminalFilter;
+    if (terminalFilters.length === 0) return "Локация";
+    if (terminalFilters.length === 1) return terminalFilters[0];
+    return `Локация (${terminalFilters.length})`;
   };
 
   const handleTerminalSelect = (terminal: string) => {
-    setTerminalFilter(terminal);
-    setTerminalDropdownOpen(false);
+    setTerminalFilters(prev => {
+      if (prev.includes(terminal)) {
+        // Remove if already selected
+        return prev.filter(t => t !== terminal);
+      } else {
+        // Add if not selected
+        return [...prev, terminal];
+      }
+    });
+    // Keep dropdown open for multiple selection
   };
 
   const getPriceLabel = () => {
@@ -294,16 +312,10 @@ export default function Catalog() {
                 </button>
                 {sizeDropdownOpen && (
                   <div className="catalog-filter-dropdown absolute top-full left-0 mt-1 z-50 w-full sm:w-auto">
-                    <div
-                      className={`catalog-filter-option ${sizeFilter === "all" ? "selected" : ""}`}
-                      onClick={() => handleSizeSelect("all")}
-                    >
-                      Все размеры
-                    </div>
                     {sizes?.map((size) => (
                       <div
                         key={size}
-                        className={`catalog-filter-option ${sizeFilter === size ? "selected" : ""}`}
+                        className={`catalog-filter-option ${sizeFilters.includes(size) ? "selected" : ""}`}
                         onClick={() => handleSizeSelect(size)}
                       >
                         {size}
@@ -370,16 +382,10 @@ export default function Catalog() {
                 </button>
                 {terminalDropdownOpen && (
                   <div className="catalog-filter-dropdown absolute top-full left-0 mt-1 z-50 w-full sm:w-auto">
-                    <div
-                      className={`catalog-filter-option ${terminalFilter === "all" ? "selected" : ""}`}
-                      onClick={() => handleTerminalSelect("all")}
-                    >
-                      Все
-                    </div>
                     {terminals?.map((terminal) => (
                       <div
                         key={terminal}
-                        className={`catalog-filter-option ${terminalFilter === terminal ? "selected" : ""}`}
+                        className={`catalog-filter-option ${terminalFilters.includes(terminal) ? "selected" : ""}`}
                         onClick={() => handleTerminalSelect(terminal)}
                       >
                         {terminal}

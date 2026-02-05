@@ -373,9 +373,9 @@ export const appRouter = router({
     // Get all active containers for catalog
     list: publicProcedure
       .input(z.object({
-        size: z.string().optional(),
+        sizes: z.array(z.string()).optional(),
         condition: z.enum(["new", "used"]).optional(),
-        terminal: z.string().optional(),
+        terminals: z.array(z.string()).optional(),
         search: z.string().optional(),
         priceFrom: z.number().optional(),
         priceTo: z.number().optional(),
@@ -384,14 +384,18 @@ export const appRouter = router({
         let containers = await db.getAllContainers(true);
         
         // Apply filters
-        if (input?.size) {
-          containers = containers.filter(c => c.size.toLowerCase().includes(input.size!.toLowerCase()));
+        if (input?.sizes && input.sizes.length > 0) {
+          containers = containers.filter(c => 
+            input.sizes!.some(size => c.size.toLowerCase().includes(size.toLowerCase()))
+          );
         }
         if (input?.condition) {
           containers = containers.filter(c => c.condition === input.condition);
         }
-        if (input?.terminal) {
-          containers = containers.filter(c => c.terminalLocation === input.terminal);
+        if (input?.terminals && input.terminals.length > 0) {
+          containers = containers.filter(c => 
+            input.terminals!.includes(c.terminalLocation || "")
+          );
         }
         if (input?.search) {
           const searchLower = input.search.toLowerCase();
