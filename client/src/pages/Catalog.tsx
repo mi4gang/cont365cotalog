@@ -9,9 +9,11 @@ import 'rc-slider/assets/index.css';
 export default function Catalog() {
   const [sizeFilter, setSizeFilter] = useState<string>("all");
   const [conditionFilter, setConditionFilter] = useState<string>("all");
+  const [terminalFilter, setTerminalFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
   const [conditionDropdownOpen, setConditionDropdownOpen] = useState(false);
+  const [terminalDropdownOpen, setTerminalDropdownOpen] = useState(false);
   const [priceDropdownOpen, setPriceDropdownOpen] = useState(false);
   const [priceFrom, setPriceFrom] = useState<string>("");
   const [priceTo, setPriceTo] = useState<string>("");
@@ -26,6 +28,7 @@ export default function Catalog() {
   
   const sizeDropdownRef = useRef<HTMLDivElement>(null);
   const conditionDropdownRef = useRef<HTMLDivElement>(null);
+  const terminalDropdownRef = useRef<HTMLDivElement>(null);
   const priceDropdownRef = useRef<HTMLDivElement>(null);
   const priceMobileAccordionRef = useRef<HTMLDivElement>(null);
 
@@ -45,25 +48,28 @@ export default function Catalog() {
     const params = new URLSearchParams();
     if (sizeFilter !== "all") params.set("size", sizeFilter);
     if (conditionFilter !== "all") params.set("condition", conditionFilter);
+    if (terminalFilter !== "all") params.set("terminal", terminalFilter);
     if (priceFrom) params.set("priceFrom", priceFrom);
     if (priceTo) params.set("priceTo", priceTo);
     if (searchQuery) params.set("search", searchQuery);
     
     const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
     window.history.replaceState({}, "", newUrl);
-  }, [sizeFilter, conditionFilter, priceFrom, priceTo, searchQuery, isInitialized]);
+  }, [sizeFilter, conditionFilter, terminalFilter, priceFrom, priceTo, searchQuery, isInitialized]);
 
   // Load filters from URL on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlSize = params.get("size");
     const urlCondition = params.get("condition");
+    const urlTerminal = params.get("terminal");
     const urlPriceFrom = params.get("priceFrom");
     const urlPriceTo = params.get("priceTo");
     const urlSearch = params.get("search");
 
     if (urlSize) setSizeFilter(urlSize);
     if (urlCondition) setConditionFilter(urlCondition);
+    if (urlTerminal) setTerminalFilter(urlTerminal);
     if (urlPriceFrom) {
       setPriceFrom(urlPriceFrom);
       const numValue = parseFloat(urlPriceFrom);
@@ -97,6 +103,7 @@ export default function Catalog() {
   const { data: containers, isLoading } = trpc.containers.list.useQuery({
     size: sizeFilter !== "all" ? sizeFilter : undefined,
     condition: conditionFilter !== "all" ? (conditionFilter as "new" | "used") : undefined,
+    terminal: terminalFilter !== "all" ? terminalFilter : undefined,
     search: searchQuery || undefined,
     priceFrom: debouncedPriceFrom ? parseFloat(debouncedPriceFrom) : undefined,
     priceTo: debouncedPriceTo ? parseFloat(debouncedPriceTo) : undefined,
@@ -106,11 +113,13 @@ export default function Catalog() {
   const { data: containersForPriceRange } = trpc.containers.list.useQuery({
     size: sizeFilter !== "all" ? sizeFilter : undefined,
     condition: conditionFilter !== "all" ? (conditionFilter as "new" | "used") : undefined,
+    terminal: terminalFilter !== "all" ? terminalFilter : undefined,
     search: searchQuery || undefined,
     // NO priceFrom/priceTo here!
   });
 
   const { data: sizes } = trpc.containers.getSizes.useQuery();
+  const { data: terminals } = trpc.containers.getTerminals.useQuery();
 
   // Calculate price range from containers WITHOUT price filter
   const priceRange = useMemo(() => {
@@ -163,6 +172,9 @@ export default function Catalog() {
       if (conditionDropdownRef.current && !conditionDropdownRef.current.contains(event.target as Node)) {
         setConditionDropdownOpen(false);
       }
+      if (terminalDropdownRef.current && !terminalDropdownRef.current.contains(event.target as Node)) {
+        setTerminalDropdownOpen(false);
+      }
       if (priceDropdownRef.current && !priceDropdownRef.current.contains(event.target as Node)) {
         // Also check if click is inside mobile accordion
         if (priceMobileAccordionRef.current && priceMobileAccordionRef.current.contains(event.target as Node)) {
@@ -195,6 +207,16 @@ export default function Catalog() {
   const handleConditionSelect = (condition: string) => {
     setConditionFilter(condition);
     setConditionDropdownOpen(false);
+  };
+
+  const getTerminalLabel = () => {
+    if (terminalFilter === "all") return "Терминал";
+    return terminalFilter;
+  };
+
+  const handleTerminalSelect = (terminal: string) => {
+    setTerminalFilter(terminal);
+    setTerminalDropdownOpen(false);
   };
 
   const getPriceLabel = () => {
@@ -254,8 +276,8 @@ export default function Catalog() {
         >
           {/* Filters Row - responsive layout */}
           <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-            {/* Filter buttons row */}
-            <div className="flex gap-2 sm:gap-3">
+            {/* First filter row: Size and Condition */}
+            <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
               {/* Size Filter Dropdown */}
               <div className="relative flex-1 sm:flex-none" ref={sizeDropdownRef}>
                 <button
@@ -263,6 +285,7 @@ export default function Catalog() {
                   onClick={() => {
                     setSizeDropdownOpen(!sizeDropdownOpen);
                     setConditionDropdownOpen(false);
+                    setTerminalDropdownOpen(false);
                     setPriceDropdownOpen(false);
                   }}
                 >
@@ -297,6 +320,7 @@ export default function Catalog() {
                   onClick={() => {
                     setConditionDropdownOpen(!conditionDropdownOpen);
                     setSizeDropdownOpen(false);
+                    setTerminalDropdownOpen(false);
                     setPriceDropdownOpen(false);
                   }}
                 >
@@ -326,6 +350,44 @@ export default function Catalog() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Second filter row: Terminal and Price */}
+            <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+              {/* Terminal Filter Dropdown */}
+              <div className="relative flex-1 sm:flex-none" ref={terminalDropdownRef}>
+                <button
+                  className="catalog-filter-btn w-full sm:w-auto min-w-0 sm:min-w-[140px]"
+                  onClick={() => {
+                    setTerminalDropdownOpen(!terminalDropdownOpen);
+                    setSizeDropdownOpen(false);
+                    setConditionDropdownOpen(false);
+                    setPriceDropdownOpen(false);
+                  }}
+                >
+                  <span className="truncate text-sm sm:text-base">{getTerminalLabel()}</span>
+                  <ChevronDown className={`w-4 h-4 opacity-60 transition-transform flex-shrink-0 ${terminalDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {terminalDropdownOpen && (
+                  <div className="catalog-filter-dropdown absolute top-full left-0 mt-1 z-50 w-full sm:w-auto">
+                    <div
+                      className={`catalog-filter-option ${terminalFilter === "all" ? "selected" : ""}`}
+                      onClick={() => handleTerminalSelect("all")}
+                    >
+                      Все
+                    </div>
+                    {terminals?.map((terminal) => (
+                      <div
+                        key={terminal}
+                        className={`catalog-filter-option ${terminalFilter === terminal ? "selected" : ""}`}
+                        onClick={() => handleTerminalSelect(terminal)}
+                      >
+                        {terminal}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Price Filter Dropdown */}
               <div className="relative flex-1 sm:flex-none" ref={priceDropdownRef}>
@@ -335,6 +397,7 @@ export default function Catalog() {
                     setPriceDropdownOpen(!priceDropdownOpen);
                     setSizeDropdownOpen(false);
                     setConditionDropdownOpen(false);
+                    setTerminalDropdownOpen(false);
                   }}
                 >
                   <span className="truncate text-sm sm:text-base">{getPriceLabel()}</span>

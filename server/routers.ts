@@ -375,6 +375,7 @@ export const appRouter = router({
       .input(z.object({
         size: z.string().optional(),
         condition: z.enum(["new", "used"]).optional(),
+        terminal: z.string().optional(),
         search: z.string().optional(),
         priceFrom: z.number().optional(),
         priceTo: z.number().optional(),
@@ -388,6 +389,9 @@ export const appRouter = router({
         }
         if (input?.condition) {
           containers = containers.filter(c => c.condition === input.condition);
+        }
+        if (input?.terminal) {
+          containers = containers.filter(c => c.terminalLocation === input.terminal);
         }
         if (input?.search) {
           const searchLower = input.search.toLowerCase();
@@ -439,6 +443,17 @@ export const appRouter = router({
       const containers = await db.getAllContainers(true);
       const sizes = Array.from(new Set(containers.map(c => c.size)));
       return sizes.sort();
+    }),
+
+    // Get unique terminals for filter dropdown
+    getTerminals: publicProcedure.query(async () => {
+      const containers = await db.getAllContainers(true);
+      const terminals = Array.from(new Set(
+        containers
+          .map(c => c.terminalLocation)
+          .filter((t): t is string => t !== null && t !== undefined && t.trim() !== '')
+      ));
+      return terminals.sort();
     }),
   }),
 
