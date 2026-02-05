@@ -210,7 +210,7 @@ export default function Catalog() {
   };
 
   const getTerminalLabel = () => {
-    if (terminalFilter === "all") return "Терминал";
+    if (terminalFilter === "all") return "Локация";
     return terminalFilter;
   };
 
