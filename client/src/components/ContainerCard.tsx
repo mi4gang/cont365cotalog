@@ -8,6 +8,7 @@ interface ContainerCardProps {
   condition: "new" | "used";
   price: string | null;
   mainPhoto: string | null;
+  terminalLocation?: string | null;
 }
 
 export default function ContainerCard({
@@ -18,6 +19,7 @@ export default function ContainerCard({
   condition,
   price,
   mainPhoto,
+  terminalLocation,
 }: ContainerCardProps) {
   const formatPrice = (price: string | null) => {
     if (!price) return "Цена по запросу";
@@ -91,8 +93,8 @@ export default function ContainerCard({
               <div className="text-slate-100 font-semibold">{size}</div>
             </div>
             <div className="text-right">
-              <div className="text-slate-400 text-xs mb-1">ID</div>
-              <div className="text-slate-100 font-semibold">{externalId}</div>
+              <div className="text-slate-400 text-xs mb-1">Локация терминал</div>
+              <div className="text-slate-100 font-semibold">{terminalLocation || '—'}</div>
             </div>
           </div>
 

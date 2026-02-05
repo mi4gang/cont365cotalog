@@ -574,6 +574,7 @@ export default function Catalog() {
                   condition={container.condition}
                   price={container.price}
                   mainPhoto={container.mainPhoto}
+                  terminalLocation={container.terminalLocation}
                 />
               ))}
             </div>

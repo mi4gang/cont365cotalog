@@ -301,6 +301,14 @@ export default function ContainerDetail() {
                       <p className="text-white font-medium text-sm sm:text-base">{container.externalId}</p>
                     </div>
 
+                    {/* Terminal Location */}
+                    {container.terminalLocation && (
+                      <div className="pb-3 mb-3" style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.15)' }}>
+                        <p className="text-slate-400 text-xs sm:text-sm mb-1">Локация терминал</p>
+                        <p className="text-white font-medium text-sm sm:text-base">{container.terminalLocation}</p>
+                      </div>
+                    )}
+
                     {/* Detailed Description if exists */}
                     {container.description && (
                       <div className="pb-3 mb-3" style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.15)' }}>

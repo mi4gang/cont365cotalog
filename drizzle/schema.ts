@@ -35,6 +35,8 @@ export const containers = mysqlTable("containers", {
   price: decimal("price", { precision: 12, scale: 2 }),
   /** Additional description */
   description: text("description"),
+  /** Terminal location (e.g., "Шубино") */
+  terminalLocation: varchar("terminalLocation", { length: 128 }),
   /** Is container available/visible in catalog */
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

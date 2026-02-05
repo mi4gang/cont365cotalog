@@ -40,6 +40,7 @@ async function parseImportFile(fileContent: string, filename: string) {
       condition: ['класс', 'состояние', 'качество', 'класссостояние', 'condition', 'quality', 'класскачества'],
       description: ['описание', 'детальноеописание', 'description', 'detaileddescription'],
       inventory: ['доступныйостаток', 'остаток', 'наличие', 'доступность', 'inventory', 'stock', 'available'],
+      terminal: ['локация', 'терминал', 'локациятерминал', 'terminal', 'location', 'terminallocation'],
     };
     
     // Read header row to determine column indices
@@ -88,6 +89,7 @@ async function parseImportFile(fileContent: string, filename: string) {
       const conditionText = columnIndices.condition !== undefined ? $(cells[columnIndices.condition]).text().trim() : '';
       const description = columnIndices.description !== undefined ? $(cells[columnIndices.description]).text().trim() : '';
       const inventoryText = columnIndices.inventory !== undefined ? $(cells[columnIndices.inventory]).text().trim() : '';
+      const terminalLocation = columnIndices.terminal !== undefined ? $(cells[columnIndices.terminal]).text().trim() : '';
       
       // Filter by inventory: if column exists, only import items with value > 0
       // If column doesn't exist, import all items (default behavior)
@@ -122,6 +124,7 @@ async function parseImportFile(fileContent: string, filename: string) {
         condition,
         price: price || undefined,
         description: description || undefined,
+        terminalLocation: terminalLocation || undefined,
         photoUrls,
       });
     });
