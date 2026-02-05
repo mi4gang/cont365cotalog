@@ -586,6 +586,7 @@ export const appRouter = router({
                 condition: item.condition,
                 price: item.price,
                 description: item.description,
+                terminalLocation: item.terminalLocation,
                 isActive: true,
               });
 
@@ -636,6 +637,7 @@ export const appRouter = router({
                 condition: item.condition,
                 price: item.price,
                 description: item.description,
+                terminalLocation: item.terminalLocation,
                 isActive: true,
               });
 
