@@ -74,14 +74,30 @@ export default function Catalog() {
     const urlSearch = getDecodedParam("search");
 
     if (urlSizes) {
-      // Filter out empty strings and duplicates
-      const sizes = Array.from(new Set(urlSizes.split(",").filter(Boolean)));
-      setSizeFilters(sizes);
+      // Split, trim, filter empty, and unique (case-insensitive)
+      const items = urlSizes.split(",").map(i => i.trim()).filter(Boolean);
+      const unique: string[] = [];
+      const seen = new Set();
+      for (const item of items) {
+        if (!seen.has(item.toLowerCase())) {
+          seen.add(item.toLowerCase());
+          unique.push(item);
+        }
+      }
+      setSizeFilters(unique);
     }
-    if (urlCondition) setConditionFilter(urlCondition);
+    if (urlCondition) setConditionFilter(urlCondition.trim());
     if (urlTerminals) {
-      const terminals = Array.from(new Set(urlTerminals.split(",").filter(Boolean)));
-      setTerminalFilters(terminals);
+      const items = urlTerminals.split(",").map(i => i.trim()).filter(Boolean);
+      const unique: string[] = [];
+      const seen = new Set();
+      for (const item of items) {
+        if (!seen.has(item.toLowerCase())) {
+          seen.add(item.toLowerCase());
+          unique.push(item);
+        }
+      }
+      setTerminalFilters(unique);
     }
     if (urlPriceFrom) {
       setPriceFrom(urlPriceFrom);
@@ -109,6 +125,9 @@ export default function Catalog() {
     if (!isInitialized) return;
     
     const params = new URLSearchParams();
+    
+    // Use a custom string builder for multiple values to avoid double encoding issues with URLSearchParams.set
+    // URLSearchParams.set will encode the comma-separated string, which might be double encoded later
     if (sizeFilters.length > 0) params.set("sizes", sizeFilters.join(","));
     if (conditionFilter !== "all") params.set("condition", conditionFilter);
     if (terminalFilters.length > 0) params.set("terminals", terminalFilters.join(","));
@@ -116,11 +135,17 @@ export default function Catalog() {
     if (priceTo) params.set("priceTo", priceTo);
     if (searchQuery) params.set("search", searchQuery);
     
+    // Manually construct the query string to have full control
+    // URLSearchParams.toString() is generally safe, but we want to ensure no double encoding
     const queryString = params.toString();
     const newUrl = queryString ? `?${queryString}` : window.location.pathname;
     
     // Only update if URL actually changed to avoid redundant history entries
-    if (window.location.search !== (queryString ? `?${queryString}` : "")) {
+    // Use decodeURIComponent to compare to avoid encoding-only differences
+    const currentSearch = decodeURIComponent(window.location.search);
+    const newSearch = decodeURIComponent(queryString ? `?${queryString}` : "");
+    
+    if (currentSearch !== newSearch) {
       window.history.replaceState({}, "", newUrl);
     }
   }, [sizeFilters, conditionFilter, terminalFilters, priceFrom, priceTo, searchQuery, isInitialized]);
@@ -237,15 +262,14 @@ export default function Catalog() {
 
   const handleSizeSelect = (size: string) => {
     setSizeFilters(prev => {
-      if (prev.includes(size)) {
-        // Remove if already selected
-        return prev.filter(s => s !== size);
+      const normalizedSize = size.trim();
+      const exists = prev.some(s => s.trim().toLowerCase() === normalizedSize.toLowerCase());
+      if (exists) {
+        return prev.filter(s => s.trim().toLowerCase() !== normalizedSize.toLowerCase());
       } else {
-        // Add if not selected
-        return [...prev, size];
+        return [...prev, normalizedSize];
       }
     });
-    // Keep dropdown open for multiple selection
   };
 
   const handleConditionSelect = (condition: string) => {
@@ -261,15 +285,14 @@ export default function Catalog() {
 
   const handleTerminalSelect = (terminal: string) => {
     setTerminalFilters(prev => {
-      if (prev.includes(terminal)) {
-        // Remove if already selected
-        return prev.filter(t => t !== terminal);
+      const normalizedTerminal = terminal.trim();
+      const exists = prev.some(t => t.trim().toLowerCase() === normalizedTerminal.toLowerCase());
+      if (exists) {
+        return prev.filter(t => t.trim().toLowerCase() !== normalizedTerminal.toLowerCase());
       } else {
-        // Add if not selected
-        return [...prev, terminal];
+        return [...prev, normalizedTerminal];
       }
     });
-    // Keep dropdown open for multiple selection
   };
 
   const getPriceLabel = () => {
@@ -347,15 +370,18 @@ export default function Catalog() {
                 </button>
                 {sizeDropdownOpen && (
                   <div className="catalog-filter-dropdown absolute top-full left-0 mt-1 z-50 w-full sm:w-auto">
-                    {sizes?.map((size) => (
-                      <div
-                        key={size}
-                        className={`catalog-filter-option ${sizeFilters.includes(size) ? "selected" : ""}`}
-                        onClick={() => handleSizeSelect(size)}
-                      >
-                        {size}
-                      </div>
-                    ))}
+                    {sizes?.map((size) => {
+                      const isSelected = sizeFilters.some(s => s.trim().toLowerCase() === size.trim().toLowerCase());
+                      return (
+                        <div
+                          key={size}
+                          className={`catalog-filter-option ${isSelected ? "selected" : ""}`}
+                          onClick={() => handleSizeSelect(size)}
+                        >
+                          {size}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -417,15 +443,18 @@ export default function Catalog() {
                 </button>
                 {terminalDropdownOpen && (
                   <div className="catalog-filter-dropdown absolute top-full left-0 mt-1 z-50 w-full sm:w-auto">
-                    {terminals?.map((terminal) => (
-                      <div
-                        key={terminal}
-                        className={`catalog-filter-option ${terminalFilters.includes(terminal) ? "selected" : ""}`}
-                        onClick={() => handleTerminalSelect(terminal)}
-                      >
-                        {terminal}
-                      </div>
-                    ))}
+                    {terminals?.map((terminal) => {
+                      const isSelected = terminalFilters.some(t => t.trim().toLowerCase() === terminal.trim().toLowerCase());
+                      return (
+                        <div
+                          key={terminal}
+                          className={`catalog-filter-option ${isSelected ? "selected" : ""}`}
+                          onClick={() => handleTerminalSelect(terminal)}
+                        >
+                          {terminal}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
