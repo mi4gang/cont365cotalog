@@ -39,8 +39,22 @@ export default function Catalog() {
   const { data: availableSizes } = trpc.containers.getSizes.useQuery();
   const { data: availableTerminals } = trpc.containers.getTerminals.useQuery();
 
+  // Helper to generate a stable, URL-safe ID from a string
+  const generateStableId = (text: string) => {
+    // Simple transliteration for Russian characters to keep IDs readable and stable
+    const ru: Record<string, string> = {
+      'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'e','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'c','ч':'ch','ш':'sh','щ':'sch','ь':'','ы':'y','ъ':'','э':'e','ю':'yu','я':'ya'
+    };
+    return text
+      .toLowerCase()
+      .split('')
+      .map(char => ru[char] || char)
+      .join('')
+      .replace(/[^a-z0-9]/g, '') // Remove special characters
+      .slice(0, 12); // Keep it reasonably short but unique
+  };
+
   // Create mappings: String -> ID and ID -> String
-  // We use the index in the sorted array as the ID
   const mappings = useMemo(() => {
     const sizeToId: Record<string, string> = {};
     const idToSize: Record<string, string> = {};
@@ -48,16 +62,16 @@ export default function Catalog() {
     const idToTerminal: Record<string, string> = {};
 
     if (availableSizes) {
-      availableSizes.forEach((size, index) => {
-        const id = (index + 1).toString();
+      availableSizes.forEach((size) => {
+        const id = generateStableId(size);
         sizeToId[size] = id;
         idToSize[id] = size;
       });
     }
 
     if (availableTerminals) {
-      availableTerminals.forEach((terminal, index) => {
-        const id = (index + 1).toString();
+      availableTerminals.forEach((terminal) => {
+        const id = generateStableId(terminal);
         terminalToId[terminal] = id;
         idToTerminal[id] = terminal;
       });
