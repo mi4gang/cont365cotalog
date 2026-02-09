@@ -40,36 +40,49 @@ export default function Catalog() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Sync filters to URL (only after initialization)
-  useEffect(() => {
-    // Don't update URL until filters are loaded from URL
-    if (!isInitialized) return;
-    
-    const params = new URLSearchParams();
-    if (sizeFilters.length > 0) params.set("sizes", sizeFilters.join(","));
-    if (conditionFilter !== "all") params.set("condition", conditionFilter);
-    if (terminalFilters.length > 0) params.set("terminals", terminalFilters.join(","));
-    if (priceFrom) params.set("priceFrom", priceFrom);
-    if (priceTo) params.set("priceTo", priceTo);
-    if (searchQuery) params.set("search", searchQuery);
-    
-    const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
-    window.history.replaceState({}, "", newUrl);
-  }, [sizeFilters, conditionFilter, terminalFilters, priceFrom, priceTo, searchQuery, isInitialized]);
-
   // Load filters from URL on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const urlSizes = params.get("sizes");
-    const urlCondition = params.get("condition");
-    const urlTerminals = params.get("terminals");
-    const urlPriceFrom = params.get("priceFrom");
-    const urlPriceTo = params.get("priceTo");
-    const urlSearch = params.get("search");
+    
+    // Helper to decode parameter safely
+    const getDecodedParam = (key: string) => {
+      let val = params.get(key);
+      if (!val) return null;
+      
+      // Attempt to decode multiple times in case of double/triple encoding
+      // but limit to 3 times to prevent infinite loops or over-decoding
+      let decoded = val;
+      let iterations = 0;
+      while (iterations < 3) {
+        try {
+          const nextDecoded = decodeURIComponent(decoded);
+          if (nextDecoded === decoded) break;
+          decoded = nextDecoded;
+          iterations++;
+        } catch (e) {
+          break;
+        }
+      }
+      return decoded;
+    };
 
-    if (urlSizes) setSizeFilters(urlSizes.split(","));
+    const urlSizes = getDecodedParam("sizes");
+    const urlCondition = getDecodedParam("condition");
+    const urlTerminals = getDecodedParam("terminals");
+    const urlPriceFrom = getDecodedParam("priceFrom");
+    const urlPriceTo = getDecodedParam("priceTo");
+    const urlSearch = getDecodedParam("search");
+
+    if (urlSizes) {
+      // Filter out empty strings and duplicates
+      const sizes = Array.from(new Set(urlSizes.split(",").filter(Boolean)));
+      setSizeFilters(sizes);
+    }
     if (urlCondition) setConditionFilter(urlCondition);
-    if (urlTerminals) setTerminalFilters(urlTerminals.split(","));
+    if (urlTerminals) {
+      const terminals = Array.from(new Set(urlTerminals.split(",").filter(Boolean)));
+      setTerminalFilters(terminals);
+    }
     if (urlPriceFrom) {
       setPriceFrom(urlPriceFrom);
       const numValue = parseFloat(urlPriceFrom);
@@ -86,9 +99,31 @@ export default function Catalog() {
     }
     if (urlSearch) setSearchQuery(urlSearch);
     
-    // Mark as initialized to prevent overwriting by priceRange useEffect
+    // Mark as initialized after setting all filters
     setIsInitialized(true);
   }, []); // Run only on mount
+
+  // Sync filters to URL (only after initialization)
+  useEffect(() => {
+    // Don't update URL until filters are loaded from URL
+    if (!isInitialized) return;
+    
+    const params = new URLSearchParams();
+    if (sizeFilters.length > 0) params.set("sizes", sizeFilters.join(","));
+    if (conditionFilter !== "all") params.set("condition", conditionFilter);
+    if (terminalFilters.length > 0) params.set("terminals", terminalFilters.join(","));
+    if (priceFrom) params.set("priceFrom", priceFrom);
+    if (priceTo) params.set("priceTo", priceTo);
+    if (searchQuery) params.set("search", searchQuery);
+    
+    const queryString = params.toString();
+    const newUrl = queryString ? `?${queryString}` : window.location.pathname;
+    
+    // Only update if URL actually changed to avoid redundant history entries
+    if (window.location.search !== (queryString ? `?${queryString}` : "")) {
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [sizeFilters, conditionFilter, terminalFilters, priceFrom, priceTo, searchQuery, isInitialized]);
 
   // Debounce price values to prevent flickering on slider movement
   useEffect(() => {
