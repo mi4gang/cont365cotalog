@@ -7,24 +7,79 @@ import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
 
 export default function Catalog() {
-  const [sizeFilters, setSizeFilters] = useState<string[]>([]);
-  const [conditionFilter, setConditionFilter] = useState<string>("all");
-  const [terminalFilters, setTerminalFilters] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  // Helper to decode parameter safely with multiple levels of encoding support
+  const getDecodedParam = (params: URLSearchParams, key: string) => {
+    let val = params.get(key);
+    if (!val) return null;
+    
+    let decoded = val;
+    let iterations = 0;
+    while (iterations < 3) {
+      try {
+        const nextDecoded = decodeURIComponent(decoded);
+        if (nextDecoded === decoded) break;
+        decoded = nextDecoded;
+        iterations++;
+      } catch (e) {
+        break;
+      }
+    }
+    return decoded;
+  };
+
+  // Helper to parse multi-value parameters consistently
+  const parseMultiValue = (val: string | null) => {
+    if (!val) return [];
+    const items = val.split(",").map(i => i.trim()).filter(Boolean);
+    const unique: string[] = [];
+    const seen = new Set();
+    for (const item of items) {
+      if (!seen.has(item.toLowerCase())) {
+        seen.add(item.toLowerCase());
+        unique.push(item);
+      }
+    }
+    return unique;
+  };
+
+  // Initialize state from URL immediately to avoid double-updates
+  const getInitialState = () => {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      sizes: parseMultiValue(getDecodedParam(params, "sizes")),
+      condition: getDecodedParam(params, "condition")?.trim() || "all",
+      terminals: parseMultiValue(getDecodedParam(params, "terminals")),
+      priceFrom: getDecodedParam(params, "priceFrom") || "",
+      priceTo: getDecodedParam(params, "priceTo") || "",
+      search: getDecodedParam(params, "search") || ""
+    };
+  };
+
+  const initialState = useMemo(() => getInitialState(), []);
+
+  const [sizeFilters, setSizeFilters] = useState<string[]>(initialState.sizes);
+  const [conditionFilter, setConditionFilter] = useState<string>(initialState.condition);
+  const [terminalFilters, setTerminalFilters] = useState<string[]>(initialState.terminals);
+  const [searchQuery, setSearchQuery] = useState(initialState.search);
+  
+  const [priceFrom, setPriceFrom] = useState<string>(initialState.priceFrom);
+  const [priceTo, setPriceTo] = useState<string>(initialState.priceTo);
+  const [sliderValues, setSliderValues] = useState<[number, number]>([
+    parseFloat(initialState.priceFrom) || 0,
+    parseFloat(initialState.priceTo) || 1000000
+  ]);
+
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
   const [conditionDropdownOpen, setConditionDropdownOpen] = useState(false);
   const [terminalDropdownOpen, setTerminalDropdownOpen] = useState(false);
   const [priceDropdownOpen, setPriceDropdownOpen] = useState(false);
-  const [priceFrom, setPriceFrom] = useState<string>("");
-  const [priceTo, setPriceTo] = useState<string>("");
-  const [sliderValues, setSliderValues] = useState<[number, number]>([0, 1000000]);
+  
   const [isMobile, setIsMobile] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
   const [sliderInitialized, setSliderInitialized] = useState(false);
   
   // Debounced price values for query (to prevent flickering)
-  const [debouncedPriceFrom, setDebouncedPriceFrom] = useState<string>("");
-  const [debouncedPriceTo, setDebouncedPriceTo] = useState<string>("");
+  const [debouncedPriceFrom, setDebouncedPriceFrom] = useState<string>(initialState.priceFrom);
+  const [debouncedPriceTo, setDebouncedPriceTo] = useState<string>(initialState.priceTo);
   
   const sizeDropdownRef = useRef<HTMLDivElement>(null);
   const conditionDropdownRef = useRef<HTMLDivElement>(null);
@@ -40,94 +95,9 @@ export default function Catalog() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Load filters from URL on mount
+  // Sync filters to URL
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    
-    // Helper to decode parameter safely
-    const getDecodedParam = (key: string) => {
-      let val = params.get(key);
-      if (!val) return null;
-      
-      // Attempt to decode multiple times in case of double/triple encoding
-      // but limit to 3 times to prevent infinite loops or over-decoding
-      let decoded = val;
-      let iterations = 0;
-      while (iterations < 3) {
-        try {
-          const nextDecoded = decodeURIComponent(decoded);
-          if (nextDecoded === decoded) break;
-          decoded = nextDecoded;
-          iterations++;
-        } catch (e) {
-          break;
-        }
-      }
-      return decoded;
-    };
-
-    const urlSizes = getDecodedParam("sizes");
-    const urlCondition = getDecodedParam("condition");
-    const urlTerminals = getDecodedParam("terminals");
-    const urlPriceFrom = getDecodedParam("priceFrom");
-    const urlPriceTo = getDecodedParam("priceTo");
-    const urlSearch = getDecodedParam("search");
-
-    if (urlSizes) {
-      // Split, trim, filter empty, and unique (case-insensitive)
-      const items = urlSizes.split(",").map(i => i.trim()).filter(Boolean);
-      const unique: string[] = [];
-      const seen = new Set();
-      for (const item of items) {
-        if (!seen.has(item.toLowerCase())) {
-          seen.add(item.toLowerCase());
-          unique.push(item);
-        }
-      }
-      setSizeFilters(unique);
-    }
-    if (urlCondition) setConditionFilter(urlCondition.trim());
-    if (urlTerminals) {
-      const items = urlTerminals.split(",").map(i => i.trim()).filter(Boolean);
-      const unique: string[] = [];
-      const seen = new Set();
-      for (const item of items) {
-        if (!seen.has(item.toLowerCase())) {
-          seen.add(item.toLowerCase());
-          unique.push(item);
-        }
-      }
-      setTerminalFilters(unique);
-    }
-    if (urlPriceFrom) {
-      setPriceFrom(urlPriceFrom);
-      const numValue = parseFloat(urlPriceFrom);
-      if (!isNaN(numValue)) {
-        setSliderValues(prev => [numValue, prev[1]]);
-      }
-    }
-    if (urlPriceTo) {
-      setPriceTo(urlPriceTo);
-      const numValue = parseFloat(urlPriceTo);
-      if (!isNaN(numValue)) {
-        setSliderValues(prev => [prev[0], numValue]);
-      }
-    }
-    if (urlSearch) setSearchQuery(urlSearch);
-    
-    // Mark as initialized after setting all filters
-    setIsInitialized(true);
-  }, []); // Run only on mount
-
-  // Sync filters to URL (only after initialization)
-  useEffect(() => {
-    // Don't update URL until filters are loaded from URL
-    if (!isInitialized) return;
-    
     const params = new URLSearchParams();
-    
-    // Use a custom string builder for multiple values to avoid double encoding issues with URLSearchParams.set
-    // URLSearchParams.set will encode the comma-separated string, which might be double encoded later
     if (sizeFilters.length > 0) params.set("sizes", sizeFilters.join(","));
     if (conditionFilter !== "all") params.set("condition", conditionFilter);
     if (terminalFilters.length > 0) params.set("terminals", terminalFilters.join(","));
@@ -135,31 +105,28 @@ export default function Catalog() {
     if (priceTo) params.set("priceTo", priceTo);
     if (searchQuery) params.set("search", searchQuery);
     
-    // Manually construct the query string to have full control
-    // URLSearchParams.toString() is generally safe, but we want to ensure no double encoding
     const queryString = params.toString();
     const newUrl = queryString ? `?${queryString}` : window.location.pathname;
     
-    // Only update if URL actually changed to avoid redundant history entries
-    // Use decodeURIComponent to compare to avoid encoding-only differences
+    // Only update if URL actually changed
     const currentSearch = decodeURIComponent(window.location.search);
     const newSearch = decodeURIComponent(queryString ? `?${queryString}` : "");
     
     if (currentSearch !== newSearch) {
       window.history.replaceState({}, "", newUrl);
     }
-  }, [sizeFilters, conditionFilter, terminalFilters, priceFrom, priceTo, searchQuery, isInitialized]);
+  }, [sizeFilters, conditionFilter, terminalFilters, priceFrom, priceTo, searchQuery]);
 
-  // Debounce price values to prevent flickering on slider movement
+  // Debounce price values
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedPriceFrom(priceFrom);
       setDebouncedPriceTo(priceTo);
-    }, 300); // 300ms debounce
+    }, 300);
     return () => clearTimeout(timer);
   }, [priceFrom, priceTo]);
 
-  // Query for displayed containers (with all filters including price)
+  // Query for displayed containers
   const { data: containers, isLoading } = trpc.containers.list.useQuery({
     sizes: sizeFilters.length > 0 ? sizeFilters : undefined,
     condition: conditionFilter !== "all" ? (conditionFilter as "new" | "used") : undefined,
@@ -169,19 +136,17 @@ export default function Catalog() {
     priceTo: debouncedPriceTo ? parseFloat(debouncedPriceTo) : undefined,
   });
 
-  // Separate query for price range calculation (WITHOUT price filter)
+  // Query for price range calculation
   const { data: containersForPriceRange } = trpc.containers.list.useQuery({
     sizes: sizeFilters.length > 0 ? sizeFilters : undefined,
     condition: conditionFilter !== "all" ? (conditionFilter as "new" | "used") : undefined,
     terminals: terminalFilters.length > 0 ? terminalFilters : undefined,
     search: searchQuery || undefined,
-    // NO priceFrom/priceTo here!
   });
 
   const { data: sizes } = trpc.containers.getSizes.useQuery();
   const { data: terminals } = trpc.containers.getTerminals.useQuery();
 
-  // Calculate price range from containers WITHOUT price filter
   const priceRange = useMemo(() => {
     if (!containersForPriceRange || containersForPriceRange.length === 0) return { min: 0, max: 1000000 };
     const prices = containersForPriceRange.map(c => parseFloat(c.price || "0")).filter(p => p > 0);
@@ -190,18 +155,19 @@ export default function Catalog() {
     const maxPrice = Math.max(...prices);
     return {
       min: Math.floor(minPrice / 1000) * 1000,
-      max: maxPrice // Use exact max price, don't round up
+      max: maxPrice
     };
   }, [containersForPriceRange]);
 
-  // Initialize slider values when price range changes (only once)
+  // Initialize slider values when price range changes (only if no URL params)
   useEffect(() => {
-    // Only update slider range if not initialized from URL and not yet initialized
-    if (containersForPriceRange && containersForPriceRange.length > 0 && !isInitialized && !sliderInitialized) {
-      setSliderValues([priceRange.min, priceRange.max]);
+    if (containersForPriceRange && containersForPriceRange.length > 0 && !sliderInitialized) {
+      if (!initialState.priceFrom && !initialState.priceTo) {
+        setSliderValues([priceRange.min, priceRange.max]);
+      }
       setSliderInitialized(true);
     }
-  }, [priceRange, containersForPriceRange, isInitialized, sliderInitialized]);
+  }, [priceRange, containersForPriceRange, sliderInitialized, initialState]);
 
   const handleSliderChange = (values: number | number[]) => {
     if (Array.isArray(values)) {
@@ -223,7 +189,6 @@ export default function Catalog() {
     }
   };
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (sizeDropdownRef.current && !sizeDropdownRef.current.contains(event.target as Node)) {
@@ -236,14 +201,12 @@ export default function Catalog() {
         setTerminalDropdownOpen(false);
       }
       if (priceDropdownRef.current && !priceDropdownRef.current.contains(event.target as Node)) {
-        // Also check if click is inside mobile accordion
         if (priceMobileAccordionRef.current && priceMobileAccordionRef.current.contains(event.target as Node)) {
-          return; // Don't close if clicking inside mobile accordion
+          return;
         }
         setPriceDropdownOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -296,10 +259,7 @@ export default function Catalog() {
   };
 
   const getPriceLabel = () => {
-    // Always show "Цена" on mobile, full range on desktop
-    const isMobile = window.innerWidth < 640;
     if (isMobile) return "Цена";
-    // Desktop: show full range with currency symbol
     if (!priceFrom && !priceTo) return "Цена";
     if (priceFrom && priceTo) return `${parseInt(priceFrom).toLocaleString()}-${parseInt(priceTo).toLocaleString()} ₽`;
     if (priceFrom) return `от ${parseInt(priceFrom).toLocaleString()} ₽`;
@@ -313,8 +273,7 @@ export default function Catalog() {
   };
 
   return (
-    <div className="catalog-page min-h-screen">
-      {/* Fixed background image - does NOT move on scroll */}
+    <div className="catalog-page">
       <div 
         style={{
           position: 'fixed',
@@ -338,11 +297,9 @@ export default function Catalog() {
           }}
         />
       </div>
-      {/* Color overlay removed - image is already pre-blurred */}
       <CatalogHeader />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
-        {/* Glassmorphism Container for entire catalog */}
         <div 
           className="catalog-glass-container p-3 sm:p-6"
           style={{
@@ -350,11 +307,8 @@ export default function Catalog() {
             WebkitBackdropFilter: 'blur(12px)'
           }}
         >
-          {/* Filters Row - responsive layout */}
           <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-            {/* First filter row: Size and Condition */}
             <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-              {/* Size Filter Dropdown */}
               <div className="relative flex-1 sm:flex-none" ref={sizeDropdownRef}>
                 <button
                   className="catalog-filter-btn w-full sm:w-auto min-w-0 sm:min-w-[140px]"
@@ -386,7 +340,6 @@ export default function Catalog() {
                 )}
               </div>
 
-              {/* Condition Filter Dropdown */}
               <div className="relative flex-1 sm:flex-none" ref={conditionDropdownRef}>
                 <button
                   className="catalog-filter-btn w-full sm:w-auto min-w-0 sm:min-w-[140px]"
@@ -425,9 +378,7 @@ export default function Catalog() {
               </div>
             </div>
 
-            {/* Second filter row: Terminal and Price */}
             <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-              {/* Terminal Filter Dropdown */}
               <div className="relative flex-1 sm:flex-none" ref={terminalDropdownRef}>
                 <button
                   className="catalog-filter-btn w-full sm:w-auto min-w-0 sm:min-w-[140px]"
@@ -459,7 +410,6 @@ export default function Catalog() {
                 )}
               </div>
 
-              {/* Price Filter Dropdown */}
               <div className="relative flex-1 sm:flex-none" ref={priceDropdownRef}>
                 <button
                   className="catalog-filter-btn w-full sm:w-auto min-w-0 sm:min-w-[140px]"
@@ -473,11 +423,9 @@ export default function Catalog() {
                   <span className="truncate text-sm sm:text-base">{getPriceLabel()}</span>
                   <ChevronDown className={`w-4 h-4 opacity-60 transition-transform flex-shrink-0 ${priceDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
-                {/* Desktop: dropdown */}
                 {priceDropdownOpen && !isMobile && (
                   <div className="catalog-filter-dropdown absolute top-full mt-1 z-50 w-80 p-5 left-0">
                     <div className="space-y-4">
-                      {/* Range Slider */}
                       <div className="px-1">
                         <Slider
                           range
@@ -502,7 +450,6 @@ export default function Catalog() {
                         />
                       </div>
                       
-                      {/* Input Fields */}
                       <div className="flex gap-3">
                         <div className="flex-1">
                           <label className="text-xs text-slate-300 mb-1.5 block">От</label>
@@ -512,7 +459,6 @@ export default function Catalog() {
                             value={priceFrom}
                             onChange={(e) => handleInputChange('from', e.target.value)}
                             className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none"
-                            style={{ '--focus-border': 'rgba(201, 122, 58, 0.5)', '--focus-ring': 'rgba(201, 122, 58, 0.2)' } as React.CSSProperties}
                             onFocus={(e) => {
                               e.currentTarget.style.borderColor = 'rgba(201, 122, 58, 0.5)';
                               e.currentTarget.style.boxShadow = '0 0 0 1px rgba(201, 122, 58, 0.2)';
@@ -531,7 +477,6 @@ export default function Catalog() {
                             value={priceTo}
                             onChange={(e) => handleInputChange('to', e.target.value)}
                             className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none"
-                            style={{ '--focus-border': 'rgba(201, 122, 58, 0.5)', '--focus-ring': 'rgba(201, 122, 58, 0.2)' } as React.CSSProperties}
                             onFocus={(e) => {
                               e.currentTarget.style.borderColor = 'rgba(201, 122, 58, 0.5)';
                               e.currentTarget.style.boxShadow = '0 0 0 1px rgba(201, 122, 58, 0.2)';
@@ -544,7 +489,6 @@ export default function Catalog() {
                         </div>
                       </div>
                       
-                      {/* Action Buttons */}
                       <div className="flex gap-2 pt-1">
                         <button
                           onClick={handlePriceReset}
@@ -556,8 +500,6 @@ export default function Catalog() {
                           onClick={() => setPriceDropdownOpen(false)}
                           className="flex-1 px-4 py-2.5 rounded text-sm font-medium text-white transition-colors"
                           style={{ backgroundColor: '#c97a3a' }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b86d34'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#c97a3a'}
                         >
                           Применить
                         </button>
@@ -568,13 +510,10 @@ export default function Catalog() {
               </div>
             </div>
 
-            {/* Mobile: accordion price filter */}
-            <>
             {priceDropdownOpen && isMobile && (
               <div className="w-full" ref={priceMobileAccordionRef}>
                 <div className="catalog-filter-dropdown p-4">
                   <div className="space-y-4">
-                    {/* Range Slider */}
                     <div className="px-1">
                       <Slider
                         range
@@ -599,7 +538,6 @@ export default function Catalog() {
                       />
                     </div>
                     
-                    {/* Input Fields */}
                     <div className="flex gap-3">
                       <div className="flex-1">
                         <label className="text-xs text-slate-300 mb-1.5 block">От</label>
@@ -609,15 +547,6 @@ export default function Catalog() {
                           value={priceFrom}
                           onChange={(e) => handleInputChange('from', e.target.value)}
                           className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none"
-                          style={{ '--focus-border': 'rgba(201, 122, 58, 0.5)', '--focus-ring': 'rgba(201, 122, 58, 0.2)' } as React.CSSProperties}
-                          onFocus={(e) => {
-                            e.currentTarget.style.borderColor = 'rgba(201, 122, 58, 0.5)';
-                            e.currentTarget.style.boxShadow = '0 0 0 1px rgba(201, 122, 58, 0.2)';
-                          }}
-                          onBlur={(e) => {
-                            e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.3)';
-                            e.currentTarget.style.boxShadow = 'none';
-                          }}
                         />
                       </div>
                       <div className="flex-1">
@@ -628,20 +557,10 @@ export default function Catalog() {
                           value={priceTo}
                           onChange={(e) => handleInputChange('to', e.target.value)}
                           className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/30 rounded text-sm text-white placeholder:text-slate-500 focus:outline-none"
-                          style={{ '--focus-border': 'rgba(201, 122, 58, 0.5)', '--focus-ring': 'rgba(201, 122, 58, 0.2)' } as React.CSSProperties}
-                          onFocus={(e) => {
-                            e.currentTarget.style.borderColor = 'rgba(201, 122, 58, 0.5)';
-                            e.currentTarget.style.boxShadow = '0 0 0 1px rgba(201, 122, 58, 0.2)';
-                          }}
-                          onBlur={(e) => {
-                            e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.3)';
-                            e.currentTarget.style.boxShadow = 'none';
-                          }}
                         />
                       </div>
                     </div>
                     
-                    {/* Action Buttons */}
                     <div className="flex gap-2 pt-1">
                       <button
                         onClick={handlePriceReset}
@@ -653,8 +572,6 @@ export default function Catalog() {
                         onClick={() => setPriceDropdownOpen(false)}
                         className="flex-1 px-4 py-2.5 rounded text-sm font-medium text-white transition-colors"
                         style={{ backgroundColor: '#c97a3a' }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b86d34'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#c97a3a'}
                       >
                         Применить
                       </button>
@@ -664,14 +581,12 @@ export default function Catalog() {
               </div>
             )}
 
-            {/* Found count - hidden on mobile, shown on desktop */}
             <div className="catalog-found hidden sm:block ml-2">
               Найдено: <span className="catalog-found-count">{containers?.length || 0}</span>
             </div>
 
             <div className="hidden sm:block flex-1" />
 
-            {/* Search input - full width on mobile */}
             <div className="relative w-full sm:w-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400/60" />
               <input
@@ -683,14 +598,11 @@ export default function Catalog() {
               />
             </div>
             
-            {/* Found count - shown on mobile below filters */}
             <div className="catalog-found sm:hidden text-center">
               Найдено: <span className="catalog-found-count">{containers?.length || 0}</span>
             </div>
-            </>
           </div>
 
-          {/* Container Grid - responsive columns */}
           {isLoading ? (
             <div className="flex items-center justify-center py-16 sm:py-20">
               <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
