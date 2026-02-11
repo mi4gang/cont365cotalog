@@ -88,43 +88,59 @@ export default function Catalog() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Initialize from URL using IDs
+  // Initialize from URL or localStorage
   useEffect(() => {
     if (!availableSizes || !availableTerminals) return; // Wait for mappings to be ready
     if (isInitialized) return;
 
     const params = new URLSearchParams(window.location.search);
+    const hasUrlParams = params.toString().length > 0;
     
-    // Parse IDs from URL and map back to strings
+    // 1. Try URL first
     const urlSizeIds = params.get("s")?.split(",").filter(Boolean) || [];
-    const initialSizes = urlSizeIds
-      .map(id => mappings.idToSize[id])
-      .filter((s): s is string => !!s);
-
+    let initialSizes = urlSizeIds.map(id => mappings.idToSize[id]).filter((s): s is string => !!s);
+    
     const urlTerminalIds = params.get("t")?.split(",").filter(Boolean) || [];
-    const initialTerminals = urlTerminalIds
-      .map(id => mappings.idToTerminal[id])
-      .filter((t): t is string => !!t);
+    let initialTerminals = urlTerminalIds.map(id => mappings.idToTerminal[id]).filter((t): t is string => !!t);
+    
+    let initialCondition = params.get("c");
+    let initialPriceFrom = params.get("pf");
+    let initialPriceTo = params.get("pt");
+    let initialSearch = params.get("q");
 
-    const urlCondition = params.get("c");
-    const urlPriceFrom = params.get("pf");
-    const urlPriceTo = params.get("pt");
-    const urlSearch = params.get("q");
+    // 2. If no URL params, try localStorage
+    if (!hasUrlParams) {
+      try {
+        const saved = localStorage.getItem('catalog_filters');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          initialSizes = parsed.sizes || [];
+          initialTerminals = parsed.terminals || [];
+          initialCondition = parsed.condition || "all";
+          initialPriceFrom = parsed.priceFrom || "";
+          initialPriceTo = parsed.priceTo || "";
+          initialSearch = parsed.search || "";
+        }
+      } catch (e) {
+        console.error("Failed to load filters from localStorage", e);
+      }
+    }
 
+    // Apply values
     if (initialSizes.length > 0) setSizeFilters(initialSizes);
     if (initialTerminals.length > 0) setTerminalFilters(initialTerminals);
-    if (urlCondition) setConditionFilter(urlCondition);
-    if (urlPriceFrom) {
-      setPriceFrom(urlPriceFrom);
-      const val = parseFloat(urlPriceFrom);
+    if (initialCondition) setConditionFilter(initialCondition);
+    if (initialPriceFrom) {
+      setPriceFrom(initialPriceFrom);
+      const val = parseFloat(initialPriceFrom);
       if (!isNaN(val)) setSliderValues(prev => [val, prev[1]]);
     }
-    if (urlPriceTo) {
-      setPriceTo(urlPriceTo);
-      const val = parseFloat(urlPriceTo);
+    if (initialPriceTo) {
+      setPriceTo(initialPriceTo);
+      const val = parseFloat(initialPriceTo);
       if (!isNaN(val)) setSliderValues(prev => [prev[0], val]);
     }
-    if (urlSearch) setSearchQuery(urlSearch);
+    if (initialSearch) setSearchQuery(initialSearch);
 
     setIsInitialized(true);
   }, [availableSizes, availableTerminals, mappings, isInitialized]);
@@ -162,6 +178,20 @@ export default function Catalog() {
     
     if (window.location.search !== (queryString ? `?${queryString}` : "")) {
       window.history.replaceState({}, "", newUrl);
+    }
+
+    // Save to localStorage for persistence between page transitions
+    try {
+      localStorage.setItem('catalog_filters', JSON.stringify({
+        sizes: sizeFilters,
+        terminals: terminalFilters,
+        condition: conditionFilter,
+        priceFrom,
+        priceTo,
+        search: searchQuery
+      }));
+    } catch (e) {
+      console.error("Failed to save filters to localStorage", e);
     }
   }, [sizeFilters, conditionFilter, terminalFilters, priceFrom, priceTo, searchQuery, isInitialized, mappings]);
 
