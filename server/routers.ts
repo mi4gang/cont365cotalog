@@ -7,6 +7,8 @@ import * as db from "./db";
 import { ContainerPhoto } from "../drizzle/schema";
 import { downloadAndSaveImage } from "./localStorage";
 import * as cheerio from "cheerio";
+import { getCatalogSyncMode, getCatalogSyncStatus, runCatalogSync, setCatalogSyncMode } from "./dataLayerSync";
+import { getCatalogWriteLockStatus, tryAcquireCatalogWriteLock } from "./catalogWriteLock";
 
 // Parse import file (CSV or XLS/HTML)
 async function parseImportFile(fileContent: string, filename: string) {
@@ -463,6 +465,34 @@ export const appRouter = router({
 
   // Admin containers management
   adminContainers: router({
+    // Data Layer -> Catalog sync status
+    getDataLayerSyncStatus: adminProcedure.query(async () => {
+      return await getCatalogSyncStatus();
+    }),
+
+    getSyncMode: adminProcedure.query(async () => {
+      return { mode: await getCatalogSyncMode() };
+    }),
+
+    setSyncMode: adminProcedure
+      .input(z.object({ mode: z.enum(["AUTO", "MANUAL"]) }))
+      .mutation(async ({ input }) => {
+        const mode = await setCatalogSyncMode(input.mode);
+        return { mode };
+    }),
+
+    // Manual Data Layer -> Catalog sync trigger
+    syncFromDataLayer: adminProcedure.mutation(async () => {
+      const result = await runCatalogSync("manual");
+      if (!result.ok) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: result.error || "Data Layer sync failed",
+        });
+      }
+      return result;
+    }),
+
     // Get all containers (including inactive)
     list: adminProcedure.query(async () => {
       const containers = await db.getAllContainers(false);
@@ -573,6 +603,17 @@ export const appRouter = router({
         console.log('[Import] Calling parseImportFile...');
         const data = await parseImportFile(input.fileContent, input.filename);
         console.log('[Import] parseImportFile returned', data.length, 'rows');
+
+        const releaseLock = tryAcquireCatalogWriteLock("manual-import");
+        if (!releaseLock) {
+          const lockStatus = getCatalogWriteLockStatus();
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `Каталог занят операцией: ${lockStatus.lockedBy ?? "unknown"}`,
+          });
+        }
+
+        try {
         
         // Create import record
         const importId = await db.createImportRecord({
@@ -716,6 +757,9 @@ export const appRouter = router({
             });
           }
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Import failed" });
+        }
+        } finally {
+          releaseLock();
         }
       }),
 

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useMemo, useState, useRef } from "react";
 import { useAdminAuth, useAdminLogout } from "@/hooks/useAdminAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -101,6 +101,12 @@ export default function AdminDashboard() {
 
   const { data: containers, refetch: refetchContainers } = trpc.adminContainers.list.useQuery();
   const { data: importHistory } = trpc.adminContainers.getImportHistory.useQuery();
+  const { data: dataLayerSyncStatus, refetch: refetchDataLayerSyncStatus } =
+    trpc.adminContainers.getDataLayerSyncStatus.useQuery(undefined, {
+      refetchInterval: 15000,
+      refetchOnWindowFocus: true,
+    });
+  const { data: syncModeData, refetch: refetchSyncMode } = trpc.adminContainers.getSyncMode.useQuery();
 
   const importMutation = trpc.adminContainers.importCsv.useMutation({
     onSuccess: (result) => {
@@ -111,6 +117,31 @@ export default function AdminDashboard() {
     },
     onError: (err) => {
       toast.error(err.message || "Ошибка импорта");
+    },
+  });
+
+  const dataLayerSyncMutation = trpc.adminContainers.syncFromDataLayer.useMutation({
+    onSuccess: (result) => {
+      toast.success(
+        `Data Layer sync: total ${result.total}, +${result.added}, обновлено ${result.updated}, деактивировано ${result.deactivated}`,
+      );
+      refetchContainers();
+      refetchDataLayerSyncStatus();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Ошибка синхронизации с Data Layer");
+      refetchDataLayerSyncStatus();
+    },
+  });
+
+  const setSyncModeMutation = trpc.adminContainers.setSyncMode.useMutation({
+    onSuccess: (result) => {
+      toast.success(`Режим синка: ${result.mode}`);
+      refetchSyncMode();
+      refetchDataLayerSyncStatus();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Ошибка переключения режима синка");
     },
   });
 
@@ -259,6 +290,33 @@ export default function AdminDashboard() {
   };
 
   const [fileContent, setFileContent] = useState<string>("");
+
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return "—";
+    return new Date(value).toLocaleString("ru-RU");
+  };
+
+  const formatDuration = (seconds?: number | null) => {
+    if (seconds == null) return "—";
+    if (seconds < 60) return `${seconds} сек`;
+    const minutes = Math.floor(seconds / 60);
+    const restSeconds = seconds % 60;
+    return restSeconds > 0 ? `${minutes} мин ${restSeconds} сек` : `${minutes} мин`;
+  };
+
+  const syncStateLabel = useMemo(() => {
+    if (dataLayerSyncStatus?.isRunning) return "Синхронизация выполняется";
+    if (dataLayerSyncStatus?.lastSuccess === true) return "Последняя синхронизация успешна";
+    if (dataLayerSyncStatus?.lastSuccess === false) return "Последняя синхронизация с ошибкой";
+    return "Синхронизация не запускалась";
+  }, [dataLayerSyncStatus?.isRunning, dataLayerSyncStatus?.lastSuccess]);
+
+  const syncStateColor = useMemo(() => {
+    if (dataLayerSyncStatus?.isRunning) return "text-blue-600";
+    if (dataLayerSyncStatus?.lastSuccess === true) return "text-green-600";
+    if (dataLayerSyncStatus?.lastSuccess === false) return "text-red-600";
+    return "text-slate-600";
+  }, [dataLayerSyncStatus?.isRunning, dataLayerSyncStatus?.lastSuccess]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -446,6 +504,105 @@ export default function AdminDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="border rounded-lg p-4 bg-slate-50 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">Автосинк из Data Layer</p>
+                      <p className="text-xs text-slate-500">
+                        Источник: блок «В наличии» дашборда BI
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={syncModeData?.mode ?? "AUTO"}
+                        onValueChange={(value) =>
+                          setSyncModeMutation.mutate({ mode: value as "AUTO" | "MANUAL" })
+                        }
+                        disabled={setSyncModeMutation.isPending || dataLayerSyncStatus?.isRunning}
+                      >
+                        <SelectTrigger className="w-[150px] h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="AUTO">AUTO</SelectItem>
+                          <SelectItem value="MANUAL">MANUAL</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        onClick={() => dataLayerSyncMutation.mutate()}
+                        disabled={dataLayerSyncMutation.isPending || dataLayerSyncStatus?.isRunning}
+                        size="sm"
+                      >
+                        {dataLayerSyncMutation.isPending || dataLayerSyncStatus?.isRunning ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Синк...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Синхронизировать с BI
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="rounded-md border bg-white p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Статус синхронизации</p>
+                      <p className={`text-xs font-semibold ${syncStateColor}`}>{syncStateLabel}</p>
+                    </div>
+                    <div className="mt-2 grid grid-cols-1 gap-2 text-xs text-slate-700 md:grid-cols-2">
+                      <div>
+                        <span className="font-medium">Последняя:</span>{" "}
+                        {formatDateTime(dataLayerSyncStatus?.lastFinishedAt)}
+                      </div>
+                      <div>
+                        <span className="font-medium">Следующая:</span>{" "}
+                        {formatDateTime(dataLayerSyncStatus?.auto?.nextRunAt)}
+                      </div>
+                      <div>
+                        <span className="font-medium">Через:</span>{" "}
+                        {formatDuration(dataLayerSyncStatus?.auto?.nextRunInSeconds)}
+                      </div>
+                      <div>
+                        <span className="font-medium">Источник последнего запуска:</span>{" "}
+                        {dataLayerSyncStatus?.lastSource ?? "—"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-600">
+                    <div>
+                      <span className="font-medium">Режим:</span>{" "}
+                      {syncModeData?.mode ?? "AUTO"}
+                    </div>
+                    <div>
+                      <span className="font-medium">Auto:</span>{" "}
+                      {dataLayerSyncStatus?.auto?.enabled ? "включен" : "выключен"}{" "}
+                      ({dataLayerSyncStatus?.auto?.intervalMinutes ?? "—"} мин)
+                    </div>
+                    <div>
+                      <span className="font-medium">Последний запуск:</span>{" "}
+                      {formatDateTime(dataLayerSyncStatus?.lastFinishedAt)}
+                    </div>
+                    <div>
+                      <span className="font-medium">Результат:</span>{" "}
+                      {dataLayerSyncStatus?.lastSuccess === true
+                        ? "успех"
+                        : dataLayerSyncStatus?.lastSuccess === false
+                          ? "ошибка"
+                          : "—"}
+                    </div>
+                    <div>
+                      <span className="font-medium">Итог последнего синка:</span>{" "}
+                      {`total ${dataLayerSyncStatus?.lastTotal ?? 0}, +${dataLayerSyncStatus?.lastAdded ?? 0}, upd ${dataLayerSyncStatus?.lastUpdated ?? 0}, off ${dataLayerSyncStatus?.lastDeactivated ?? 0}`}
+                    </div>
+                  </div>
+                  {dataLayerSyncStatus?.lastError && (
+                    <p className="text-xs text-red-600">{dataLayerSyncStatus.lastError}</p>
+                  )}
+                </div>
+
                 {/* File Upload */}
                 <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
                   <input

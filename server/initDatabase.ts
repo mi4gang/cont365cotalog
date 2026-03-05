@@ -5,6 +5,7 @@
 
 import { getDb } from './db';
 import bcrypt from 'bcryptjs';
+import { TABLE_NAMES } from '../drizzle/schema';
 
 export async function initDatabase() {
   console.log('[Database Init] Starting database initialization...');
@@ -18,7 +19,7 @@ export async function initDatabase() {
   try {
     // Create users table (for Manus OAuth compatibility, not used for admin auth)
     await db.execute(`
-      CREATE TABLE IF NOT EXISTS \`users\` (
+      CREATE TABLE IF NOT EXISTS \`${TABLE_NAMES.users}\` (
         \`id\` int AUTO_INCREMENT NOT NULL,
         \`openId\` varchar(64) NOT NULL,
         \`name\` text,
@@ -28,15 +29,15 @@ export async function initDatabase() {
         \`createdAt\` timestamp NOT NULL DEFAULT (now()),
         \`updatedAt\` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
         \`lastSignedIn\` timestamp NOT NULL DEFAULT (now()),
-        CONSTRAINT \`users_id\` PRIMARY KEY(\`id\`),
-        CONSTRAINT \`users_openId_unique\` UNIQUE(\`openId\`)
+        CONSTRAINT \`${TABLE_NAMES.users}_id\` PRIMARY KEY(\`id\`),
+        CONSTRAINT \`${TABLE_NAMES.users}_openId_unique\` UNIQUE(\`openId\`)
       )
     `);
     console.log('[Database Init] ✓ users table ready');
 
     // Create admin_users table for local authentication
     await db.execute(`
-      CREATE TABLE IF NOT EXISTS \`admin_users\` (
+      CREATE TABLE IF NOT EXISTS \`${TABLE_NAMES.adminUsers}\` (
         \`id\` int AUTO_INCREMENT NOT NULL,
         \`username\` varchar(64) NOT NULL,
         \`passwordHash\` varchar(255) NOT NULL,
@@ -44,15 +45,15 @@ export async function initDatabase() {
         \`createdAt\` timestamp NOT NULL DEFAULT (now()),
         \`updatedAt\` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
         \`lastSignedIn\` timestamp,
-        CONSTRAINT \`admin_users_id\` PRIMARY KEY(\`id\`),
-        CONSTRAINT \`admin_users_username_unique\` UNIQUE(\`username\`)
+        CONSTRAINT \`${TABLE_NAMES.adminUsers}_id\` PRIMARY KEY(\`id\`),
+        CONSTRAINT \`${TABLE_NAMES.adminUsers}_username_unique\` UNIQUE(\`username\`)
       )
     `);
     console.log('[Database Init] ✓ admin_users table ready');
 
     // Create containers table
     await db.execute(`
-      CREATE TABLE IF NOT EXISTS \`containers\` (
+      CREATE TABLE IF NOT EXISTS \`${TABLE_NAMES.containers}\` (
         \`id\` int AUTO_INCREMENT NOT NULL,
         \`externalId\` varchar(64) NOT NULL,
         \`name\` varchar(128) NOT NULL,
@@ -60,18 +61,31 @@ export async function initDatabase() {
         \`condition\` enum('new','used') NOT NULL DEFAULT 'used',
         \`price\` decimal(12,2),
         \`description\` text,
+        \`terminalLocation\` varchar(128),
         \`isActive\` boolean NOT NULL DEFAULT true,
         \`createdAt\` timestamp NOT NULL DEFAULT (now()),
         \`updatedAt\` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-        CONSTRAINT \`containers_id\` PRIMARY KEY(\`id\`),
-        CONSTRAINT \`containers_externalId_unique\` UNIQUE(\`externalId\`)
+        CONSTRAINT \`${TABLE_NAMES.containers}_id\` PRIMARY KEY(\`id\`),
+        CONSTRAINT \`${TABLE_NAMES.containers}_externalId_unique\` UNIQUE(\`externalId\`)
       )
     `);
     console.log('[Database Init] ✓ containers table ready');
 
+    // Non-destructive migration for existing tables created before terminalLocation field.
+    const terminalLocationColumn = await db.execute(
+      `SHOW COLUMNS FROM \`${TABLE_NAMES.containers}\` LIKE 'terminalLocation'`,
+    );
+    const hasTerminalLocation = ((terminalLocationColumn as any)[0] ?? []).length > 0;
+    if (!hasTerminalLocation) {
+      await db.execute(
+        `ALTER TABLE \`${TABLE_NAMES.containers}\` ADD COLUMN \`terminalLocation\` varchar(128) NULL AFTER \`description\``,
+      );
+      console.log('[Database Init] ✓ containers.terminalLocation column added');
+    }
+
     // Create container_photos table
     await db.execute(`
-      CREATE TABLE IF NOT EXISTS \`container_photos\` (
+      CREATE TABLE IF NOT EXISTS \`${TABLE_NAMES.containerPhotos}\` (
         \`id\` int AUTO_INCREMENT NOT NULL,
         \`containerId\` int NOT NULL,
         \`url\` varchar(512) NOT NULL,
@@ -80,14 +94,14 @@ export async function initDatabase() {
         \`originalName\` varchar(255),
         \`createdAt\` timestamp NOT NULL DEFAULT (now()),
         \`updatedAt\` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-        CONSTRAINT \`container_photos_id\` PRIMARY KEY(\`id\`)
+        CONSTRAINT \`${TABLE_NAMES.containerPhotos}_id\` PRIMARY KEY(\`id\`)
       )
     `);
     console.log('[Database Init] ✓ container_photos table ready');
 
     // Create import_history table
     await db.execute(`
-      CREATE TABLE IF NOT EXISTS \`import_history\` (
+      CREATE TABLE IF NOT EXISTS \`${TABLE_NAMES.importHistory}\` (
         \`id\` int AUTO_INCREMENT NOT NULL,
         \`adminUserId\` int,
         \`filename\` varchar(255),
@@ -99,20 +113,44 @@ export async function initDatabase() {
         \`errorMessage\` text,
         \`createdAt\` timestamp NOT NULL DEFAULT (now()),
         \`completedAt\` timestamp,
-        CONSTRAINT \`import_history_id\` PRIMARY KEY(\`id\`)
+        CONSTRAINT \`${TABLE_NAMES.importHistory}_id\` PRIMARY KEY(\`id\`)
       )
     `);
     console.log('[Database Init] ✓ import_history table ready');
 
+    // Create catalog_sync_settings table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS \`${TABLE_NAMES.catalogSyncSettings}\` (
+        \`id\` int AUTO_INCREMENT NOT NULL,
+        \`mode\` enum('AUTO','MANUAL') NOT NULL DEFAULT 'AUTO',
+        \`updatedAt\` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT \`${TABLE_NAMES.catalogSyncSettings}_id\` PRIMARY KEY(\`id\`)
+      )
+    `);
+    console.log('[Database Init] ✓ catalog_sync_settings table ready');
+
+    const syncSettingsCheck = await db.execute(
+      `SELECT COUNT(*) as count FROM \`${TABLE_NAMES.catalogSyncSettings}\``,
+    );
+    const hasSyncSettings = (syncSettingsCheck as any)[0]?.[0]?.count > 0;
+    if (!hasSyncSettings) {
+      await db.execute(
+        `INSERT INTO \`${TABLE_NAMES.catalogSyncSettings}\` (\`mode\`) VALUES ('AUTO')`,
+      );
+      console.log('[Database Init] ✓ Default catalog sync mode created (AUTO)');
+    } else {
+      console.log('[Database Init] ✓ Catalog sync mode already exists');
+    }
+
     // Check if admin user exists
-    const adminCheck = await db.execute(`SELECT COUNT(*) as count FROM \`admin_users\` WHERE \`username\` = 'admin'`);
+    const adminCheck = await db.execute(`SELECT COUNT(*) as count FROM \`${TABLE_NAMES.adminUsers}\` WHERE \`username\` = 'admin'`);
     const adminExists = (adminCheck as any)[0]?.[0]?.count > 0;
 
     if (!adminExists) {
       // Create default admin user (username: admin, password: admin123)
       const passwordHash = await bcrypt.hash('admin123', 10);
       await db.execute(`
-        INSERT INTO \`admin_users\` (\`username\`, \`passwordHash\`, \`name\`) 
+        INSERT INTO \`${TABLE_NAMES.adminUsers}\` (\`username\`, \`passwordHash\`, \`name\`) 
         VALUES ('admin', '${passwordHash}', 'Administrator')
       `);
       console.log('[Database Init] ✓ Default admin user created (username: admin, password: admin123)');
