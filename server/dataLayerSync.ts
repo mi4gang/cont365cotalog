@@ -29,6 +29,18 @@ interface DataLayerProcontainerPayload {
   }>;
 }
 
+interface DataLayerSyncStatus {
+  isSyncing?: boolean;
+  manual?: {
+    lastStartedAt?: string | null;
+    lastFinishedAt?: string | null;
+    lastSuccess?: boolean | null;
+    lastError?: string | null;
+    lastScope?: string | null;
+    lastSource?: string | null;
+  };
+}
+
 interface CatalogSyncState {
   isRunning: boolean;
   lastStartedAt: string | null;
@@ -63,6 +75,14 @@ const AUTO_SYNC_ENABLED = (process.env.CATALOG_AUTO_SYNC_ENABLED ?? "true").toLo
 const AUTO_SYNC_INTERVAL_MINUTES = Math.max(1, Number(process.env.CATALOG_AUTO_SYNC_INTERVAL_MINUTES ?? 60));
 const AUTO_SYNC_RUN_ON_START = (process.env.CATALOG_AUTO_SYNC_RUN_ON_START ?? "false").toLowerCase() === "true";
 const DATA_LAYER_API_BASE_URL = (process.env.DATA_LAYER_API_BASE_URL ?? "").trim().replace(/\/+$/, "");
+const DATA_LAYER_MANUAL_SYNC_TIMEOUT_MS = Math.max(
+  10_000,
+  Number(process.env.DATA_LAYER_MANUAL_SYNC_TIMEOUT_MS ?? 90_000),
+);
+const DATA_LAYER_MANUAL_SYNC_POLL_MS = Math.max(
+  1_000,
+  Number(process.env.DATA_LAYER_MANUAL_SYNC_POLL_MS ?? 2_000),
+);
 
 let currentRun: Promise<CatalogSyncResult> | null = null;
 let intervalHandle: NodeJS.Timeout | null = null;
@@ -107,6 +127,69 @@ function normalizePhotoUrls(value: unknown): string[] {
   return value
     .map((item) => String(item ?? "").trim())
     .filter((url) => /^https?:\/\//i.test(url));
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchDataLayerSyncStatus(): Promise<DataLayerSyncStatus> {
+  if (!DATA_LAYER_API_BASE_URL) {
+    throw new Error("DATA_LAYER_API_BASE_URL is not configured");
+  }
+
+  const response = await axios.get<DataLayerSyncStatus>(`${DATA_LAYER_API_BASE_URL}/api/sync/status`, {
+    timeout: 30_000,
+    validateStatus: (status) => status >= 200 && status < 300,
+  });
+  return response.data ?? {};
+}
+
+async function triggerManualDataLayerSyncIfNeeded(source: SyncSource): Promise<void> {
+  if (source !== "manual") {
+    return;
+  }
+  if (!DATA_LAYER_API_BASE_URL) {
+    throw new Error("DATA_LAYER_API_BASE_URL is not configured");
+  }
+
+  const statusBefore = await fetchDataLayerSyncStatus();
+  const previousManualStartedAt = statusBefore.manual?.lastStartedAt ?? null;
+  const runUrl = `${DATA_LAYER_API_BASE_URL}/api/sync/run?scope=fast&source=manual`;
+
+  const runResponse = await axios.post(runUrl, undefined, {
+    timeout: 30_000,
+    validateStatus: (status) => (status >= 200 && status < 300) || status === 409,
+  });
+
+  if (runResponse.status === 409) {
+    const errorCode = String(runResponse.data?.error ?? "");
+    if (errorCode && errorCode !== "sync_already_running") {
+      throw new Error(`Data Layer sync rejected: ${errorCode}`);
+    }
+  }
+
+  const deadline = Date.now() + DATA_LAYER_MANUAL_SYNC_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    const status = await fetchDataLayerSyncStatus();
+    if (!status.isSyncing) {
+      const manualStartedAt = status.manual?.lastStartedAt ?? null;
+      const manualRunStarted = manualStartedAt !== previousManualStartedAt;
+      const manualFailed = status.manual?.lastSuccess === false;
+      const manualError = String(status.manual?.lastError ?? "").trim();
+
+      if (manualRunStarted && manualFailed) {
+        throw new Error(manualError || "Data Layer manual sync failed");
+      }
+
+      return;
+    }
+
+    await sleep(DATA_LAYER_MANUAL_SYNC_POLL_MS);
+  }
+
+  throw new Error("Timed out waiting for Data Layer sync to finish");
 }
 
 async function fetchCatalogPayloadFromDataLayer(): Promise<{ items: DataLayerCatalogItem[]; supportsPhotos: boolean }> {
@@ -196,6 +279,7 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
   let total = 0;
 
   try {
+    await triggerManualDataLayerSyncIfNeeded(source);
     const { items: catalogRows, supportsPhotos } = await fetchCatalogPayloadFromDataLayer();
     total = catalogRows.length;
 
