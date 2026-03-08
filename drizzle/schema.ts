@@ -37,6 +37,8 @@ export const containers = mysqlTable(TABLE_NAMES.containers, {
   id: int("id").autoincrement().primaryKey(),
   /** External ID from CSV file (e.g., FONU11320953) - used for matching on re-import */
   externalId: varchar("externalId", { length: 64 }).notNull().unique(),
+  /** Stable Bitrix product identity shadow field for Data Layer sync hardening */
+  bitrixProductId: int("bitrixProductId"),
   /** Display name (e.g., "Контейнер #19") */
   name: varchar("name", { length: 128 }).notNull(),
   /** Container size/type (e.g., "10 фут", "20 фут 2.6", "40 фут") */

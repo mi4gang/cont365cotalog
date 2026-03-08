@@ -33,12 +33,17 @@ These must stay green for a change to be considered safe:
   - no duplicate container numbers in `reserved`
   - no overlap between `stock` and `reserved`
   - `catalog/containers` matches the same stock identity set as dashboard stock
+  - if shadow `bitrixProductId` is present, it stays duplicate-free in payload
 - Catalog shared DB is structurally healthy:
   - active containers have unique non-empty `externalId`
+  - active `bitrixProductId` values do not duplicate when populated
   - active containers have non-empty `name` and `size`
   - no orphan photos
   - no container has more than one main photo
   - sync settings row exists
+- Shadow identity wiring stays additive:
+  - `bitrixProductId` may be backfilled/populated
+  - current `externalId` contract stays intact until a separately verified switch
 - Data Layer MySQL mirror passes `healthcheck.py`
 
 ## Warning Conditions

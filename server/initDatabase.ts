@@ -56,6 +56,7 @@ export async function initDatabase() {
       CREATE TABLE IF NOT EXISTS \`${TABLE_NAMES.containers}\` (
         \`id\` int AUTO_INCREMENT NOT NULL,
         \`externalId\` varchar(64) NOT NULL,
+        \`bitrixProductId\` int,
         \`name\` varchar(128) NOT NULL,
         \`size\` varchar(64) NOT NULL,
         \`condition\` enum('new','used') NOT NULL DEFAULT 'used',
@@ -81,6 +82,28 @@ export async function initDatabase() {
         `ALTER TABLE \`${TABLE_NAMES.containers}\` ADD COLUMN \`terminalLocation\` varchar(128) NULL AFTER \`description\``,
       );
       console.log('[Database Init] ✓ containers.terminalLocation column added');
+    }
+
+    const bitrixProductIdColumn = await db.execute(
+      `SHOW COLUMNS FROM \`${TABLE_NAMES.containers}\` LIKE 'bitrixProductId'`,
+    );
+    const hasBitrixProductId = ((bitrixProductIdColumn as any)[0] ?? []).length > 0;
+    if (!hasBitrixProductId) {
+      await db.execute(
+        `ALTER TABLE \`${TABLE_NAMES.containers}\` ADD COLUMN \`bitrixProductId\` int NULL AFTER \`externalId\``,
+      );
+      console.log('[Database Init] ✓ containers.bitrixProductId column added');
+    }
+
+    const bitrixProductIdIndex = await db.execute(
+      `SHOW INDEX FROM \`${TABLE_NAMES.containers}\` WHERE Key_name = 'idx_containers_bitrixProductId'`,
+    );
+    const hasBitrixProductIdIndex = ((bitrixProductIdIndex as any)[0] ?? []).length > 0;
+    if (!hasBitrixProductIdIndex) {
+      await db.execute(
+        `CREATE INDEX \`idx_containers_bitrixProductId\` ON \`${TABLE_NAMES.containers}\` (\`bitrixProductId\`)`,
+      );
+      console.log('[Database Init] ✓ containers.bitrixProductId index added');
     }
 
     // Create container_photos table

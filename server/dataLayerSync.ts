@@ -6,6 +6,7 @@ type SyncSource = "manual" | "auto-startup" | "auto-hourly";
 type SyncMode = "AUTO" | "MANUAL";
 
 interface DataLayerCatalogItem {
+  bitrixProductId?: number | string;
   containerNumber?: string;
   name?: string;
   terminal?: string;
@@ -23,6 +24,7 @@ interface DataLayerPayload {
 
 interface DataLayerProcontainerPayload {
   stock?: Array<{
+    bitrixProductId?: number | string;
     containerNumber?: string;
     terminal?: string;
     recommendedPrice?: number | string;
@@ -108,6 +110,13 @@ function toNumber(value: unknown): number {
 
 function normalizeExternalId(raw: unknown): string {
   return String(raw ?? "").trim();
+}
+
+function normalizeBitrixProductId(raw: unknown): number | undefined {
+  if (raw === null || raw === undefined || raw === "") return undefined;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value <= 0) return undefined;
+  return value;
 }
 
 function normalizeSize(value: unknown): string {
@@ -217,6 +226,7 @@ async function fetchCatalogPayloadFromDataLayer(): Promise<{ items: DataLayerCat
       });
       const fallbackItems = (Array.isArray(fallbackResponse.data?.stock) ? fallbackResponse.data.stock : [])
         .map((row) => ({
+          bitrixProductId: row.bitrixProductId,
           containerNumber: row.containerNumber,
           name: row.containerNumber,
           terminal: row.terminal,
@@ -291,8 +301,10 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
 
       processedExternalIds.push(externalId);
       const photos = normalizePhotoUrls(row.photos);
+      const bitrixProductId = normalizeBitrixProductId(row.bitrixProductId);
       const payload = {
         externalId,
+        bitrixProductId,
         name: String(row.name ?? externalId).trim() || externalId,
         size: normalizeSize(row.containerType),
         condition: normalizeCondition(row.condition),

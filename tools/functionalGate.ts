@@ -20,6 +20,7 @@ interface DataLayerSyncStatus {
 }
 
 interface ProcontainerRow {
+  bitrixProductId?: number | string;
   containerNumber?: string;
   stockQuantity?: number | string;
   reserveEnd?: string | null;
@@ -32,6 +33,7 @@ interface ProcontainerPayload {
 }
 
 interface CatalogRow {
+  bitrixProductId?: number | string;
   containerNumber?: string;
   photos?: string[];
 }
@@ -47,6 +49,13 @@ function add(results: CheckResult[], status: CheckStatus, name: string, details:
 
 function normalizeId(value: unknown): string {
   return String(value ?? "").trim();
+}
+
+function normalizeBitrixProductId(value: unknown): number | undefined {
+  if (value === null || value === undefined || value === "") return undefined;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) return undefined;
+  return parsed;
 }
 
 function listDuplicates(values: string[]): string[] {
@@ -82,6 +91,11 @@ async function fetchJson<T>(url: string): Promise<T> {
     validateStatus: (status) => status >= 200 && status < 300,
   });
   return response.data;
+}
+
+async function hasColumn(tableName: string, columnName: string): Promise<boolean> {
+  const result = await execute(`SHOW COLUMNS FROM \`${tableName}\` LIKE '${columnName}'`);
+  return (((result as any)?.[0] ?? []) as unknown[]).length > 0;
 }
 
 async function main() {
@@ -145,6 +159,16 @@ async function main() {
       .map((row) => normalizeId(row.containerNumber))
       .filter(Boolean),
   );
+  const stockBitrixIds = new Set(
+    (Array.isArray(procontainerPayload?.stock) ? procontainerPayload.stock : [])
+      .map((row) => normalizeBitrixProductId(row.bitrixProductId))
+      .filter((value): value is number => value !== undefined),
+  );
+  const dataLayerCatalogBitrixIds = new Set(
+    (Array.isArray(catalogPayload?.containers) ? catalogPayload.containers : [])
+      .map((row) => normalizeBitrixProductId(row.bitrixProductId))
+      .filter((value): value is number => value !== undefined),
+  );
 
   if (procontainerPayload) {
     const stockValues = (procontainerPayload.stock ?? []).map((row) => normalizeId(row.containerNumber)).filter(Boolean);
@@ -191,6 +215,19 @@ async function main() {
       "data_layer.reserved_end_present",
       missingReserveEnd === 0 ? "0 invalid rows" : `${missingReserveEnd} reserved rows have empty reserveEnd`,
     );
+
+    const stockBitrixDuplicates = listDuplicates(
+      (procontainerPayload.stock ?? [])
+        .map((row) => normalizeBitrixProductId(row.bitrixProductId))
+        .filter((value): value is number => value !== undefined)
+        .map(String),
+    );
+    add(
+      results,
+      stockBitrixDuplicates.length === 0 ? "PASS" : "FAIL",
+      "data_layer.stock_bitrix_id_duplicates",
+      stockBitrixDuplicates.length === 0 ? "0" : stockBitrixDuplicates.join(", "),
+    );
   }
 
   if (catalogPayload && procontainerPayload) {
@@ -205,15 +242,47 @@ async function main() {
         ? `matched set (${stockIds.size})`
         : `onlyInCatalog=${onlyInCatalog.length}, onlyInStock=${onlyInStock.length}; samples=${[...onlyInCatalog.slice(0, 3), ...onlyInStock.slice(0, 3)].join(", ")}`,
     );
+
+    const bitrixOnlyInCatalog = difference(
+      new Set([...dataLayerCatalogBitrixIds].map(String)),
+      new Set([...stockBitrixIds].map(String)),
+    );
+    const bitrixOnlyInStock = difference(
+      new Set([...stockBitrixIds].map(String)),
+      new Set([...dataLayerCatalogBitrixIds].map(String)),
+    );
+    const bitrixMismatchCount = bitrixOnlyInCatalog.length + bitrixOnlyInStock.length;
+    add(
+      results,
+      bitrixMismatchCount === 0 ? "PASS" : "WARN",
+      "data_layer.catalog_bitrix_ids_match_stock",
+      bitrixMismatchCount === 0
+        ? `matched set (${stockBitrixIds.size})`
+        : `onlyInCatalog=${bitrixOnlyInCatalog.length}, onlyInStock=${bitrixOnlyInStock.length}`,
+    );
   }
 
   try {
+    const hasBitrixProductIdColumn = await hasColumn(TABLE_NAMES.containers, "bitrixProductId");
+    if (!hasBitrixProductIdColumn) {
+      add(results, "WARN", "catalog.shadow_column", "containers.bitrixProductId column is not created yet");
+    }
+
     const activeContainersResult = await execute(
-      `SELECT \`id\`, \`externalId\`, \`name\`, \`size\` FROM \`${TABLE_NAMES.containers}\` WHERE \`isActive\` = 1 ORDER BY \`id\` ASC`,
+      hasBitrixProductIdColumn
+        ? `SELECT \`id\`, \`externalId\`, \`bitrixProductId\`, \`name\`, \`size\`
+           FROM \`${TABLE_NAMES.containers}\`
+           WHERE \`isActive\` = 1
+           ORDER BY \`id\` ASC`
+        : `SELECT \`id\`, \`externalId\`, \`name\`, \`size\`
+           FROM \`${TABLE_NAMES.containers}\`
+           WHERE \`isActive\` = 1
+           ORDER BY \`id\` ASC`,
     );
     const activeContainers = ((activeContainersResult as any)?.[0] ?? []) as Array<{
       id: number;
       externalId: string | null;
+      bitrixProductId: number | null;
       name: string | null;
       size: string | null;
     }>;
@@ -239,6 +308,19 @@ async function main() {
       invalidActiveRows.length === 0 ? "ok" : `${invalidActiveRows.length} active rows have blank externalId/name/size`,
     );
 
+    const activeBitrixIds = activeContainers
+      .map((row: any) => normalizeBitrixProductId(row.bitrixProductId))
+      .filter((value: number | undefined): value is number => value !== undefined);
+    if (hasBitrixProductIdColumn) {
+      const duplicateBitrixIds = listDuplicates(activeBitrixIds.map(String));
+      add(
+        results,
+        duplicateBitrixIds.length === 0 ? "PASS" : "FAIL",
+        "catalog.active_bitrix_id_duplicates",
+        duplicateBitrixIds.length === 0 ? "0" : duplicateBitrixIds.join(", "),
+      );
+    }
+
     if (catalogPayload) {
       const activeIdSet = new Set(activeExternalIds);
       const missingInCatalogDb = difference(dataLayerCatalogIds, activeIdSet);
@@ -252,6 +334,22 @@ async function main() {
           ? `matched set (${activeIdSet.size})`
           : `missingInCatalogDb=${missingInCatalogDb.length}, extraInCatalogDb=${extraInCatalogDb.length}; samples=${[...missingInCatalogDb.slice(0, 3), ...extraInCatalogDb.slice(0, 3)].join(", ")}`,
       );
+
+      if (hasBitrixProductIdColumn) {
+        const activeBitrixIdSet = new Set(activeBitrixIds.map(String));
+        const dataLayerBitrixIdSet = new Set([...dataLayerCatalogBitrixIds].map(String));
+        const missingBitrixInCatalogDb = difference(dataLayerBitrixIdSet, activeBitrixIdSet);
+        const extraBitrixInCatalogDb = difference(activeBitrixIdSet, dataLayerBitrixIdSet);
+        const shadowDriftCount = missingBitrixInCatalogDb.length + extraBitrixInCatalogDb.length;
+        add(
+          results,
+          shadowDriftCount === 0 ? "PASS" : "WARN",
+          "catalog.shadow_bitrix_identity",
+          shadowDriftCount === 0
+            ? `matched set (${activeBitrixIdSet.size})`
+            : `missingInCatalogDb=${missingBitrixInCatalogDb.length}, extraInCatalogDb=${extraBitrixInCatalogDb.length}`,
+        );
+      }
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
