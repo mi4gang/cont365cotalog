@@ -1,10 +1,22 @@
 import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean } from "drizzle-orm/mysql-core";
 
+const TABLE_PREFIX = (process.env.CATALOG_TABLE_PREFIX ?? "").trim();
+const tableName = (name: string) => `${TABLE_PREFIX}${name}`;
+
+export const TABLE_NAMES = {
+  adminUsers: tableName("admin_users"),
+  containers: tableName("containers"),
+  containerPhotos: tableName("container_photos"),
+  importHistory: tableName("import_history"),
+  catalogSyncSettings: tableName("catalog_sync_settings"),
+  users: tableName("users"),
+} as const;
+
 /**
  * Admin users table for local authentication (not Manus OAuth)
  * Used for employees to access admin panel
  */
-export const adminUsers = mysqlTable("admin_users", {
+export const adminUsers = mysqlTable(TABLE_NAMES.adminUsers, {
   id: int("id").autoincrement().primaryKey(),
   username: varchar("username", { length: 64 }).notNull().unique(),
   passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
@@ -21,7 +33,7 @@ export type InsertAdminUser = typeof adminUsers.$inferInsert;
  * Containers table - main catalog items
  * Stores container information imported from CSV
  */
-export const containers = mysqlTable("containers", {
+export const containers = mysqlTable(TABLE_NAMES.containers, {
   id: int("id").autoincrement().primaryKey(),
   /** External ID from CSV file (e.g., FONU11320953) - used for matching on re-import */
   externalId: varchar("externalId", { length: 64 }).notNull().unique(),
@@ -51,7 +63,7 @@ export type InsertContainer = typeof containers.$inferInsert;
  * Stores photo URLs and display settings for each container
  * Photo order and main photo selection are preserved during CSV re-import
  */
-export const containerPhotos = mysqlTable("container_photos", {
+export const containerPhotos = mysqlTable(TABLE_NAMES.containerPhotos, {
   id: int("id").autoincrement().primaryKey(),
   /** Reference to container */
   containerId: int("containerId").notNull(),
@@ -73,7 +85,7 @@ export type InsertContainerPhoto = typeof containerPhotos.$inferInsert;
 /**
  * CSV import history - tracks imports for audit
  */
-export const importHistory = mysqlTable("import_history", {
+export const importHistory = mysqlTable(TABLE_NAMES.importHistory, {
   id: int("id").autoincrement().primaryKey(),
   /** Admin user who performed import */
   adminUserId: int("adminUserId"),
@@ -98,8 +110,20 @@ export const importHistory = mysqlTable("import_history", {
 export type ImportHistory = typeof importHistory.$inferSelect;
 export type InsertImportHistory = typeof importHistory.$inferInsert;
 
+/**
+ * Catalog sync runtime mode (AUTO/MANUAL).
+ */
+export const catalogSyncSettings = mysqlTable(TABLE_NAMES.catalogSyncSettings, {
+  id: int("id").autoincrement().primaryKey(),
+  mode: mysqlEnum("mode", ["AUTO", "MANUAL"]).notNull().default("AUTO"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CatalogSyncSettings = typeof catalogSyncSettings.$inferSelect;
+export type InsertCatalogSyncSettings = typeof catalogSyncSettings.$inferInsert;
+
 // Keep original users table for Manus OAuth compatibility (but won't be used for admin auth)
-export const users = mysqlTable("users", {
+export const users = mysqlTable(TABLE_NAMES.users, {
   id: int("id").autoincrement().primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),

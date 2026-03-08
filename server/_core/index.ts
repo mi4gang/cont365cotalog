@@ -6,7 +6,8 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-// import { initDatabase } from "../initDatabase"; // Disabled: use manual SQL script instead
+import { startCatalogAutoSyncScheduler } from "../dataLayerSync";
+import { initDatabase } from "../initDatabase";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -28,8 +29,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
-  // Database initialization disabled - use init-production-mysql.sql script in phpMyAdmin instead
-  // await initDatabase();
+  await initDatabase();
   
   const app = express();
   const server = createServer(app);
@@ -70,6 +70,7 @@ async function startServer() {
   server.listen(finalPort, host, () => {
     console.log(`Server is running on port ${finalPort}`);
     console.log(`Server running on http://${host}:${finalPort}/`);
+    startCatalogAutoSyncScheduler();
   });
 }
 

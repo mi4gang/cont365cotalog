@@ -84,6 +84,18 @@ nano .env
 # База данных
 DATABASE_URL=mysql://contcatlog_user:your_secure_password@localhost:3306/contcatlog
 
+# Опционально: префикс таблиц для работы в общей БД с BI-слоем.
+# Пример: CATALOG_TABLE_PREFIX=catalog_
+CATALOG_TABLE_PREFIX=
+
+# URL Data Layer API (источник автосинка каталога)
+DATA_LAYER_API_BASE_URL=
+
+# Автосинк Data Layer -> каталог
+CATALOG_AUTO_SYNC_ENABLED=false
+CATALOG_AUTO_SYNC_INTERVAL_MINUTES=60
+CATALOG_AUTO_SYNC_RUN_ON_START=false
+
 # JWT секрет для сессий (сгенерируйте случайную строку)
 JWT_SECRET=your_random_secret_key_here_min_32_chars
 

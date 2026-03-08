@@ -7,10 +7,14 @@ import {
   adminUsers, InsertAdminUser, AdminUser,
   containers, InsertContainer, Container,
   containerPhotos, InsertContainerPhoto, ContainerPhoto,
-  importHistory, InsertImportHistory, ImportHistory
+  importHistory, InsertImportHistory, ImportHistory,
+  catalogSyncSettings, CatalogSyncSettings,
+  TABLE_NAMES,
 } from "../drizzle/schema";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+// Drizzle mysql2 typings may differ between mysql2 entrypoints (promise vs base).
+// Keep runtime-safe singleton without over-constraining compile-time $client type.
+let _db: any = null;
 let _pool: mysql.Pool | null = null;
 
 /**
@@ -102,7 +106,7 @@ export async function getAdminUserByUsername(username: string): Promise<AdminUse
   const db = await getDb();
   if (!db) return undefined;
   try {
-    const result = await execute(`SELECT * FROM \`admin_users\` WHERE \`username\` = ? LIMIT 1`, [username]);
+    const result = await execute(`SELECT * FROM \`${TABLE_NAMES.adminUsers}\` WHERE \`username\` = ? LIMIT 1`, [username]);
     return (result as any)[0]?.[0] as AdminUser | undefined;
   } catch (error) {
     return undefined;
@@ -113,7 +117,7 @@ export async function getAdminUserById(id: number): Promise<AdminUser | undefine
   const db = await getDb();
   if (!db) return undefined;
   try {
-    const result = await execute(`SELECT * FROM \`admin_users\` WHERE \`id\` = ? LIMIT 1`, [id]);
+    const result = await execute(`SELECT * FROM \`${TABLE_NAMES.adminUsers}\` WHERE \`id\` = ? LIMIT 1`, [id]);
     return (result as any)[0]?.[0] as AdminUser | undefined;
   } catch (error) {
     return undefined;
@@ -125,7 +129,7 @@ export async function verifyAdminPassword(username: string, password: string): P
   if (!user) return null;
   const isValid = await bcrypt.compare(password, user.passwordHash);
   if (!isValid) return null;
-  await execute(`UPDATE \`admin_users\` SET \`lastSignedIn\` = NOW() WHERE \`id\` = ?`, [user.id]);
+  await execute(`UPDATE \`${TABLE_NAMES.adminUsers}\` SET \`lastSignedIn\` = NOW() WHERE \`id\` = ?`, [user.id]);
   return user;
 }
 
@@ -179,7 +183,7 @@ export async function updateContainer(id: number, data: Partial<InsertContainer>
 export async function deleteContainer(id: number): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
-  await db.transaction(async (tx) => {
+  await db.transaction(async (tx: any) => {
     await tx.delete(containerPhotos).where(eq(containerPhotos.containerId, id));
     await tx.delete(containers).where(eq(containers.id, id));
   });
@@ -189,7 +193,7 @@ export async function deleteContainer(id: number): Promise<boolean> {
 export async function deleteAllContainers(): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
-  await db.transaction(async (tx) => {
+  await db.transaction(async (tx: any) => {
     await tx.delete(containerPhotos);
     await tx.delete(containers);
   });
@@ -204,7 +208,7 @@ export async function deactivateContainersNotIn(externalIds: string[]): Promise<
     return 0;
   }
   const activeContainers = await db.select().from(containers).where(eq(containers.isActive, true));
-  const toDeactivate = activeContainers.filter(c => !externalIds.includes(c.externalId));
+  const toDeactivate = activeContainers.filter((c: Container) => !externalIds.includes(c.externalId));
   if (toDeactivate.length > 0) {
     await db.update(containers)
       .set({ isActive: false })
@@ -259,7 +263,7 @@ export async function updatePhotoOrder(photoId: number, displayOrder: number): P
 export async function setMainPhoto(containerId: number, photoId: number): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
-  await db.transaction(async (tx) => {
+  await db.transaction(async (tx: any) => {
     await tx.update(containerPhotos).set({ isMain: false }).where(eq(containerPhotos.containerId, containerId));
     await tx.update(containerPhotos).set({ isMain: true }).where(eq(containerPhotos.id, photoId));
   });
@@ -293,4 +297,31 @@ export async function getImportHistory(): Promise<ImportHistory[]> {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(importHistory).orderBy(desc(importHistory.createdAt));
+}
+
+// ==================== Catalog Sync Settings ====================
+
+export async function getCatalogSyncSettings(): Promise<CatalogSyncSettings | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(catalogSyncSettings).orderBy(desc(catalogSyncSettings.id)).limit(1);
+  return rows[0];
+}
+
+export async function getCatalogSyncMode(): Promise<"AUTO" | "MANUAL"> {
+  const settings = await getCatalogSyncSettings();
+  return settings?.mode === "MANUAL" ? "MANUAL" : "AUTO";
+}
+
+export async function setCatalogSyncMode(mode: "AUTO" | "MANUAL"): Promise<"AUTO" | "MANUAL"> {
+  const db = await getDb();
+  if (!db) return "AUTO";
+
+  const settings = await getCatalogSyncSettings();
+  if (settings) {
+    await db.update(catalogSyncSettings).set({ mode }).where(eq(catalogSyncSettings.id, settings.id));
+  } else {
+    await db.insert(catalogSyncSettings).values({ mode });
+  }
+  return mode;
 }
