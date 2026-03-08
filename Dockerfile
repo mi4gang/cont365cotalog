@@ -12,8 +12,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
 # Set working directory (TimeWeb uses /usr/src/app)
 WORKDIR /usr/src/app
 
-# Copy package files
+# Copy dependency metadata and pnpm patches first.
 COPY package.json pnpm-lock.yaml ./
+COPY patches ./patches
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
