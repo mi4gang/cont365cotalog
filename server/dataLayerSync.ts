@@ -86,7 +86,7 @@ const CATALOG_SYNC_USE_BITRIX_ID_MATCHING =
 const DATA_LAYER_API_BASE_URL = (process.env.DATA_LAYER_API_BASE_URL ?? "").trim().replace(/\/+$/, "");
 const DATA_LAYER_MANUAL_SYNC_TIMEOUT_MS = Math.max(
   10_000,
-  Number(process.env.DATA_LAYER_MANUAL_SYNC_TIMEOUT_MS ?? 90_000),
+  Number(process.env.DATA_LAYER_MANUAL_SYNC_TIMEOUT_MS ?? 180_000),
 );
 const DATA_LAYER_MANUAL_SYNC_POLL_MS = Math.max(
   1_000,
@@ -171,7 +171,7 @@ async function triggerManualDataLayerSyncIfNeeded(source: SyncSource): Promise<v
 
   const statusBefore = await fetchDataLayerSyncStatus();
   const previousManualStartedAt = statusBefore.manual?.lastStartedAt ?? null;
-  const runUrl = `${DATA_LAYER_API_BASE_URL}/api/sync/run?scope=fast&source=manual`;
+  const runUrl = `${DATA_LAYER_API_BASE_URL}/api/sync/run?scope=catalog&source=manual`;
 
   const runResponse = await axios.post(runUrl, undefined, {
     timeout: 30_000,
