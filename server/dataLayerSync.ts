@@ -266,6 +266,16 @@ async function replaceContainerPhotos(containerId: number, photoUrls: string[]):
   }
 }
 
+async function syncContainerPhotos(containerId: number, photoUrls: string[]): Promise<void> {
+  // Data Layer photo payload can be temporarily empty when image mirror is stale.
+  // Keep existing catalog photos instead of wiping them on an otherwise valid sync.
+  if (photoUrls.length === 0) {
+    return;
+  }
+
+  await replaceContainerPhotos(containerId, photoUrls);
+}
+
 async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
   const releaseLock = tryAcquireCatalogWriteLock("data-layer-sync");
   if (!releaseLock) {
@@ -337,7 +347,7 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
           bitrixProductId: bitrixProductId ?? existing.bitrixProductId,
         });
         if (supportsPhotos) {
-          await replaceContainerPhotos(existing.id, photos);
+          await syncContainerPhotos(existing.id, photos);
         }
         updated += 1;
       } else {
@@ -345,7 +355,7 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
         if (created) {
           registerContainerIdentity(identityIndex, created);
           if (supportsPhotos) {
-            await replaceContainerPhotos(created.id, photos);
+            await syncContainerPhotos(created.id, photos);
           }
         }
         added += 1;
