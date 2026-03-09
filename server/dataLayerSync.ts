@@ -171,7 +171,7 @@ async function triggerManualDataLayerSyncIfNeeded(source: SyncSource): Promise<v
 
   const statusBefore = await fetchDataLayerSyncStatus();
   const previousManualStartedAt = statusBefore.manual?.lastStartedAt ?? null;
-  const runUrl = `${DATA_LAYER_API_BASE_URL}/api/sync/run?scope=catalog&source=manual`;
+  const runUrl = `${DATA_LAYER_API_BASE_URL}/api/sync/run?scope=full&source=manual`;
 
   const runResponse = await axios.post(runUrl, undefined, {
     timeout: 30_000,
