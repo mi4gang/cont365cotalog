@@ -1,6 +1,11 @@
 import axios from "axios";
 import * as db from "./db";
 import { getCatalogWriteLockStatus, tryAcquireCatalogWriteLock } from "./catalogWriteLock";
+import {
+  buildContainerIdentityIndex,
+  registerContainerIdentity,
+  resolveContainerIdentityMatch,
+} from "./dataLayerIdentity";
 
 type SyncSource = "manual" | "auto-startup" | "auto-hourly";
 type SyncMode = "AUTO" | "MANUAL";
@@ -76,6 +81,8 @@ const state: CatalogSyncState = {
 const AUTO_SYNC_ENABLED = (process.env.CATALOG_AUTO_SYNC_ENABLED ?? "true").toLowerCase() === "true";
 const AUTO_SYNC_INTERVAL_MINUTES = Math.max(1, Number(process.env.CATALOG_AUTO_SYNC_INTERVAL_MINUTES ?? 60));
 const AUTO_SYNC_RUN_ON_START = (process.env.CATALOG_AUTO_SYNC_RUN_ON_START ?? "false").toLowerCase() === "true";
+const CATALOG_SYNC_USE_BITRIX_ID_MATCHING =
+  (process.env.CATALOG_SYNC_USE_BITRIX_ID_MATCHING ?? "false").toLowerCase() === "true";
 const DATA_LAYER_API_BASE_URL = (process.env.DATA_LAYER_API_BASE_URL ?? "").trim().replace(/\/+$/, "");
 const DATA_LAYER_MANUAL_SYNC_TIMEOUT_MS = Math.max(
   10_000,
@@ -292,6 +299,7 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
     await triggerManualDataLayerSyncIfNeeded(source);
     const { items: catalogRows, supportsPhotos } = await fetchCatalogPayloadFromDataLayer();
     total = catalogRows.length;
+    const identityIndex = buildContainerIdentityIndex(await db.getAllContainers(false));
 
     const processedExternalIds: string[] = [];
 
@@ -314,10 +322,20 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
         isActive: row.isActive !== false,
       } as const;
 
-      const existing = await db.getContainerByExternalId(externalId);
+      const { existing } = resolveContainerIdentityMatch(identityIndex, {
+        externalId,
+        bitrixProductId,
+        preferBitrixIdMatching: CATALOG_SYNC_USE_BITRIX_ID_MATCHING,
+      });
+
       if (existing) {
         // AUTO policy: overwrite all sync fields.
         await db.updateContainer(existing.id, payload);
+        registerContainerIdentity(identityIndex, {
+          ...existing,
+          externalId,
+          bitrixProductId: bitrixProductId ?? existing.bitrixProductId,
+        });
         if (supportsPhotos) {
           await replaceContainerPhotos(existing.id, photos);
         }
@@ -325,6 +343,7 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
       } else {
         const created = await db.createContainer(payload);
         if (created) {
+          registerContainerIdentity(identityIndex, created);
           if (supportsPhotos) {
             await replaceContainerPhotos(created.id, photos);
           }
@@ -390,6 +409,7 @@ export async function getCatalogSyncStatus() {
       enabled: autoEnabled,
       intervalMinutes: AUTO_SYNC_INTERVAL_MINUTES,
       runOnStart: AUTO_SYNC_RUN_ON_START,
+      stableIdentityMatching: CATALOG_SYNC_USE_BITRIX_ID_MATCHING,
       dataLayerBaseUrl: DATA_LAYER_API_BASE_URL || null,
       nextRunAt: nextAutoRunAt,
       nextRunInSeconds: nextAutoInSeconds,

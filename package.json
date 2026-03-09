@@ -12,7 +12,8 @@
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "functional:gate": "tsx tools/functionalGate.ts",
-    "backfill:bitrix-product-ids": "tsx tools/backfillBitrixProductIds.ts"
+    "backfill:bitrix-product-ids": "tsx tools/backfillBitrixProductIds.ts",
+    "sandbox:clone": "tsx tools/cloneCatalogSandbox.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
