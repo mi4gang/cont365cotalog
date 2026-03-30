@@ -171,7 +171,7 @@ export default function ReservedDealDetail() {
                   price={container.price}
                   mainPhoto={container.mainPhoto}
                   terminalLocation={container.terminal}
-                  href={container.catalogContainerId ? `/reserve/deal/${data.dealId}/container/${container.catalogContainerId}` : undefined}
+                  href={`/reserve/deal/${data.dealId}/container/${encodeURIComponent(container.externalId ?? container.containerNumber)}`}
                   badgeText="В брони"
                   badgeTone="reserved"
                   detailNote={container.reserveEnd ? `Срок брони до ${formatDate(container.reserveEnd)}` : "Срок брони уточняется"}

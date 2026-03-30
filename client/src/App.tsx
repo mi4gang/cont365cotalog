@@ -34,7 +34,7 @@ function Router() {
       {/* Public Routes */}
       <Route path="/" component={Catalog} />
       <Route path="/container/:id" component={ContainerDetail} />
-      <Route path="/reserve/deal/:dealId/container/:id" component={ContainerDetail} />
+      <Route path="/reserve/deal/:dealId/container/:externalId" component={ContainerDetail} />
       <Route path="/reserve/deal/:dealId" component={ReservedDealDetail} />
 
       {/* Admin Routes */}

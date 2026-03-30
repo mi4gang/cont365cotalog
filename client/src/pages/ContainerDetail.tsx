@@ -23,8 +23,9 @@ function formatDate(value?: string | null) {
 }
 
 export default function ContainerDetail() {
-  const params = useParams<{ id: string; dealId?: string }>();
+  const params = useParams<{ id?: string; externalId?: string; dealId?: string }>();
   const containerId = parseInt(params.id || "0", 10);
+  const reservedExternalId = params.externalId || "";
   const dealId = params.dealId ? parseInt(params.dealId, 10) : null;
   const isReservedMode = Number.isInteger(dealId) && Number(dealId) > 0;
 
@@ -41,8 +42,8 @@ export default function ContainerDetail() {
   );
 
   const reservedContainerQuery = trpc.reservations.getContainerByDealId.useQuery(
-    { dealId: dealId ?? 0, containerId },
-    { enabled: containerId > 0 && isReservedMode },
+    { dealId: dealId ?? 0, externalId: reservedExternalId },
+    { enabled: reservedExternalId.length > 0 && isReservedMode },
   );
 
   const publicContainer = publicContainerQuery.data;

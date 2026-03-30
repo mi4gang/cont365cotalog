@@ -795,12 +795,12 @@ export const appRouter = router({
       }),
 
     getContainerByDealId: publicProcedure
-      .input(z.object({ dealId: z.number().int().positive(), containerId: z.number().int().positive() }))
+      .input(z.object({ dealId: z.number().int().positive(), externalId: z.string().min(1) }))
       .query(async ({ input }) => {
         const payload = await fetchReservedDealById(input.dealId);
         const reservation = await buildReservedDealView(payload);
         const reservedContainer = reservation.containers.find(
-          (item) => item.catalogContainerId === input.containerId,
+          (item) => (item.externalId ?? item.containerNumber) === input.externalId,
         );
 
         if (!reservation.active || !reservedContainer) {
@@ -810,7 +810,7 @@ export const appRouter = router({
           });
         }
 
-        const container = await db.getContainerById(input.containerId);
+        const container = await db.getContainerByExternalId(input.externalId);
         if (!container) {
           throw new TRPCError({
             code: "NOT_FOUND",
