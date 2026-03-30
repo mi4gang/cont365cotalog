@@ -48,6 +48,25 @@ interface DataLayerReservedDealPayload {
   generatedAt?: string;
 }
 
+interface ReservedDealContainerView {
+  id: string;
+  bitrixProductId: number | null;
+  catalogContainerId: number | null;
+  externalId: string | null;
+  name: string;
+  containerNumber: string;
+  size: string | null;
+  containerType: string | null;
+  condition: "new" | "used" | null;
+  terminal: string;
+  price: string | null;
+  reserveStart: string | null;
+  reserveEnd: string | null;
+  reserveDays: number | null;
+  mainPhoto: string | null;
+  description: string | null;
+}
+
 async function fetchReservedDealById(dealId: number): Promise<DataLayerReservedDealPayload> {
   if (!DATA_LAYER_API_BASE_URL) {
     throw new Error("DATA_LAYER_API_BASE_URL is not configured");
@@ -62,6 +81,68 @@ async function fetchReservedDealById(dealId: number): Promise<DataLayerReservedD
   );
 
   return response.data;
+}
+
+async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
+  const reservationContainers = Array.isArray(payload.containers) ? payload.containers : [];
+
+  const bitrixIds = reservationContainers
+    .map((item) => item.bitrixProductId)
+    .filter((value): value is number => Number.isInteger(value) && Number(value) > 0);
+
+  const catalogContainers = await db.getContainersByBitrixProductIds(bitrixIds);
+  const catalogByBitrixId = new Map(catalogContainers
+    .filter((item) => Number.isInteger(item.bitrixProductId))
+    .map((item) => [Number(item.bitrixProductId), item]));
+
+  const containers: ReservedDealContainerView[] = await Promise.all(
+    reservationContainers.map(async (item) => {
+      const bitrixProductId = Number.isInteger(item.bitrixProductId)
+        ? Number(item.bitrixProductId)
+        : null;
+      const catalogContainer = bitrixProductId
+        ? (
+            catalogByBitrixId.get(bitrixProductId) ??
+            (item.containerNumber ? await db.getContainerByExternalId(item.containerNumber) : undefined)
+          )
+        : (item.containerNumber ? await db.getContainerByExternalId(item.containerNumber) : undefined);
+      const mainPhoto = catalogContainer
+        ? await db.getMainPhotoByContainerId(catalogContainer.id)
+        : undefined;
+
+      return {
+        id: item.id,
+        bitrixProductId,
+        catalogContainerId: catalogContainer?.id ?? null,
+        externalId: catalogContainer?.externalId ?? null,
+        name: catalogContainer?.name ?? item.containerNumber ?? `Контейнер ${item.id}`,
+        containerNumber: item.containerNumber ?? catalogContainer?.name ?? `Контейнер ${item.id}`,
+        size: catalogContainer?.size ?? item.containerType ?? null,
+        containerType: item.containerType ?? catalogContainer?.size ?? null,
+        condition: catalogContainer?.condition ?? null,
+        terminal: item.terminal ?? catalogContainer?.terminalLocation ?? "Не указан",
+        price: catalogContainer?.price ?? (item.recommendedPrice != null ? String(item.recommendedPrice) : null),
+        reserveStart: item.reserveStart ?? null,
+        reserveEnd: item.reserveEnd ?? null,
+        reserveDays: item.reserveDays ?? null,
+        mainPhoto: mainPhoto?.url ?? null,
+        description: catalogContainer?.description ?? null,
+      };
+    }),
+  );
+
+  return {
+    active: payload.active,
+    state: payload.state ?? (payload.active ? "active" : "reserve_not_active"),
+    dealId: payload.dealId,
+    dealName: payload.dealName ?? `Сделка ${payload.dealId}`,
+    dealUrl: payload.dealUrl ?? null,
+    contactName: payload.contactName ?? "",
+    contactPhone: payload.contactPhone ?? "",
+    managerName: payload.managerName ?? "Не указан",
+    generatedAt: payload.generatedAt ?? null,
+    containers,
+  };
 }
 
 // Parse import file (CSV or XLS/HTML)
@@ -710,60 +791,49 @@ export const appRouter = router({
       .input(z.object({ dealId: z.number().int().positive() }))
       .query(async ({ input }) => {
         const payload = await fetchReservedDealById(input.dealId);
-        const reservationContainers = Array.isArray(payload.containers) ? payload.containers : [];
+        return buildReservedDealView(payload);
+      }),
 
-        const bitrixIds = reservationContainers
-          .map((item) => item.bitrixProductId)
-          .filter((value): value is number => Number.isInteger(value) && Number(value) > 0);
-
-        const catalogContainers = await db.getContainersByBitrixProductIds(bitrixIds);
-        const catalogByBitrixId = new Map(catalogContainers
-          .filter((item) => Number.isInteger(item.bitrixProductId))
-          .map((item) => [Number(item.bitrixProductId), item]));
-
-        const enrichedContainers = await Promise.all(
-          reservationContainers.map(async (item) => {
-            const bitrixProductId = Number.isInteger(item.bitrixProductId)
-              ? Number(item.bitrixProductId)
-              : null;
-            const catalogContainer = bitrixProductId ? catalogByBitrixId.get(bitrixProductId) : undefined;
-            const mainPhoto = catalogContainer
-              ? await db.getMainPhotoByContainerId(catalogContainer.id)
-              : undefined;
-
-            return {
-              id: item.id,
-              bitrixProductId,
-              catalogContainerId: catalogContainer?.id ?? null,
-              externalId: catalogContainer?.externalId ?? null,
-              name: catalogContainer?.name ?? item.containerNumber ?? `Контейнер ${item.id}`,
-              containerNumber: item.containerNumber ?? catalogContainer?.name ?? `Контейнер ${item.id}`,
-              size: catalogContainer?.size ?? item.containerType ?? null,
-              containerType: item.containerType ?? catalogContainer?.size ?? null,
-              condition: catalogContainer?.condition ?? null,
-              terminal: item.terminal ?? catalogContainer?.terminalLocation ?? "Не указан",
-              price: catalogContainer?.price ?? null,
-              recommendedPrice: item.recommendedPrice ?? null,
-              reserveStart: item.reserveStart ?? null,
-              reserveEnd: item.reserveEnd ?? null,
-              reserveDays: item.reserveDays ?? null,
-              mainPhoto: mainPhoto?.url ?? null,
-              description: catalogContainer?.description ?? null,
-            };
-          }),
+    getContainerByDealId: publicProcedure
+      .input(z.object({ dealId: z.number().int().positive(), containerId: z.number().int().positive() }))
+      .query(async ({ input }) => {
+        const payload = await fetchReservedDealById(input.dealId);
+        const reservation = await buildReservedDealView(payload);
+        const reservedContainer = reservation.containers.find(
+          (item) => item.catalogContainerId === input.containerId,
         );
 
+        if (!reservation.active || !reservedContainer) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Reserved container not found",
+          });
+        }
+
+        const container = await db.getContainerById(input.containerId);
+        if (!container) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Container not found",
+          });
+        }
+
+        const photos = await db.getPhotosByContainerId(container.id);
+
         return {
-          active: payload.active,
-          state: payload.state ?? (payload.active ? "active" : "reserve_not_active"),
-          dealId: payload.dealId,
-          dealName: payload.dealName ?? `Сделка ${payload.dealId}`,
-          dealUrl: payload.dealUrl ?? null,
-          contactName: payload.contactName ?? "",
-          contactPhone: payload.contactPhone ?? "",
-          managerName: payload.managerName ?? "Не указан",
-          generatedAt: payload.generatedAt ?? null,
-          containers: enrichedContainers,
+          ...container,
+          photos,
+          reservation: {
+            dealId: reservation.dealId,
+            dealName: reservation.dealName,
+            dealUrl: reservation.dealUrl,
+            contactName: reservation.contactName,
+            contactPhone: reservation.contactPhone,
+            managerName: reservation.managerName,
+            reserveStart: reservedContainer.reserveStart,
+            reserveEnd: reservedContainer.reserveEnd,
+            reserveDays: reservedContainer.reserveDays,
+          },
         };
       }),
   }),

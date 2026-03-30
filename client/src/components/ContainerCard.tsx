@@ -9,6 +9,11 @@ interface ContainerCardProps {
   price: string | null;
   mainPhoto: string | null;
   terminalLocation?: string | null;
+  href?: string;
+  badgeText?: string;
+  badgeTone?: "default" | "reserved";
+  detailNote?: string | null;
+  actionLabel?: string;
 }
 
 export default function ContainerCard({
@@ -20,6 +25,11 @@ export default function ContainerCard({
   price,
   mainPhoto,
   terminalLocation,
+  href,
+  badgeText,
+  badgeTone = "default",
+  detailNote,
+  actionLabel = "Смотреть",
 }: ContainerCardProps) {
   const formatPrice = (price: string | null) => {
     if (!price) return "Цена по запросу";
@@ -39,74 +49,83 @@ export default function ContainerCard({
   // Badge colors - more contrasting for visibility
   // Новый: brighter blue
   // Б/У: lighter gray-blue for better contrast
-  const badgeStyle = condition === "new"
-    ? { background: "oklab(0.511 0.0317755 -0.260066 / 0.9)" }
-    : { background: "rgba(100, 116, 139, 0.9)" }; // Lighter gray for better visibility
+  const badgeStyle = badgeTone === "reserved"
+    ? { background: "rgba(217, 119, 6, 0.95)" }
+    : condition === "new"
+      ? { background: "oklab(0.511 0.0317755 -0.260066 / 0.9)" }
+      : { background: "rgba(100, 116, 139, 0.9)" }; // Lighter gray for better visibility
 
-  return (
-    <Link href={`/container/${id}`}>
-      <div 
-        className="catalog-card group cursor-pointer rounded-xl overflow-hidden"
-        style={{ 
-          background: cardGradient,
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)'
-        }}
-      >
-        {/* Photo Section with zoom effect */}
-        <div className="relative h-48 sm:h-40 overflow-hidden flex-shrink-0">
-          {mainPhoto ? (
-            <img
-              src={mainPhoto}
-              alt={name}
-              loading="lazy"
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-            />
-          ) : (
-            <div className="w-full h-full bg-slate-700/50 flex items-center justify-center">
-              <svg className="w-16 h-16 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-          )}
-          
-          {/* Status Badge - more visible colors */}
-          <div 
-            className="absolute top-3 right-3 text-xs font-semibold px-3 py-1 rounded-full"
-            style={{ 
-              ...badgeStyle,
-              color: "#fff"
-            }}
-          >
-            {condition === "new" ? "Новый" : "Б/У"}
+  const content = (
+    <div 
+      className="catalog-card group cursor-pointer rounded-xl overflow-hidden"
+      style={{ 
+        background: cardGradient,
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)'
+      }}
+    >
+      {/* Photo Section with zoom effect */}
+      <div className="relative h-48 sm:h-40 overflow-hidden flex-shrink-0">
+        {mainPhoto ? (
+          <img
+            src={mainPhoto}
+            alt={name}
+            loading="lazy"
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <div className="w-full h-full bg-slate-700/50 flex items-center justify-center">
+            <svg className="w-16 h-16 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
           </div>
-        </div>
-
-        {/* Info Section - extended to include title */}
-        <div className="flex-1 p-3 sm:p-4 flex flex-col justify-between">
-          {/* Title now part of card content */}
-          <h3 className="text-white font-bold text-base sm:text-lg line-clamp-1 mb-2 sm:mb-3">{name}</h3>
-          
-          <div className="flex justify-between mb-2 sm:mb-3 text-xs sm:text-sm">
-            <div>
-              <div className="text-slate-400 text-xs mb-1">Размер</div>
-              <div className="text-slate-100 font-semibold">{size}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-slate-400 text-xs mb-1">Локация терминал</div>
-              <div className="text-slate-100 font-semibold">{terminalLocation || '—'}</div>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3">
-            {/* Price - WHITE color */}
-            <div className="text-white font-bold text-base sm:text-lg">{formatPrice(price)}</div>
-            <button className="catalog-button w-full sm:w-40 h-10 sm:h-12 text-sm sm:text-base">
-              Смотреть
-            </button>
-          </div>
+        )}
+        
+        {/* Status Badge - more visible colors */}
+        <div 
+          className="absolute top-3 right-3 text-xs font-semibold px-3 py-1 rounded-full"
+          style={{ 
+            ...badgeStyle,
+            color: "#fff"
+          }}
+        >
+          {badgeText || (condition === "new" ? "Новый" : "Б/У")}
         </div>
       </div>
-    </Link>
+
+      {/* Info Section - extended to include title */}
+      <div className="flex-1 p-3 sm:p-4 flex flex-col justify-between">
+        {/* Title now part of card content */}
+        <h3 className="text-white font-bold text-base sm:text-lg line-clamp-1 mb-2">{name}</h3>
+        {detailNote ? (
+          <div className="text-xs sm:text-sm font-medium text-amber-200 mb-3">{detailNote}</div>
+        ) : null}
+        
+        <div className="flex justify-between mb-2 sm:mb-3 text-xs sm:text-sm">
+          <div>
+            <div className="text-slate-400 text-xs mb-1">Размер</div>
+            <div className="text-slate-100 font-semibold">{size}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-slate-400 text-xs mb-1">Локация терминал</div>
+            <div className="text-slate-100 font-semibold">{terminalLocation || '—'}</div>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3">
+          {/* Price - WHITE color */}
+          <div className="text-white font-bold text-base sm:text-lg">{formatPrice(price)}</div>
+          <button className="catalog-button w-full sm:w-40 h-10 sm:h-12 text-sm sm:text-base">
+            {actionLabel}
+          </button>
+        </div>
+      </div>
+    </div>
   );
+
+  if (href) {
+    return <Link href={href}>{content}</Link>;
+  }
+
+  return <Link href={`/container/${id}`}>{content}</Link>;
 }
