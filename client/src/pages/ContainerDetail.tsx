@@ -231,9 +231,6 @@ export default function ContainerDetail() {
                   <div className="rounded-xl border border-white/10 bg-white/5 p-4">
                     <div className="text-xs uppercase tracking-[0.12em] text-slate-400 mb-1">Менеджер</div>
                     <div className="text-white font-semibold">{reservation.managerName || "Не указан"}</div>
-                    {reservation.contactName ? (
-                      <div className="text-sm text-slate-300 mt-2">{reservation.contactName}</div>
-                    ) : null}
                   </div>
                 </div>
               </div>
