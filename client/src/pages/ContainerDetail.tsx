@@ -15,7 +15,7 @@ export default function ContainerDetail() {
   const touchStartX = useRef<number>(0);
   const touchEndX = useRef<number>(0);
 
-  const { data: container, isLoading, error } = trpc.containers.getById.useQuery(
+  const { data: container, isLoading, error } = trpc.containers.getPublicById.useQuery(
     { id: containerId },
     { enabled: containerId > 0 }
   );

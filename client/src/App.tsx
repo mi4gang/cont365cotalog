@@ -9,14 +9,20 @@ import AdminAuthGuard from "./components/AdminAuthGuard";
 // Pages
 // import Home from "./pages/Home"; // Removed - catalog is now homepage
 import Catalog from "./pages/Catalog";
+import CatalogLab from "./pages/CatalogLab";
 import ContainerDetail from "./pages/ContainerDetail";
+import ReservedDealDetail from "./pages/ReservedDealDetail";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminContainerEdit from "./pages/AdminContainerEdit";
 import Setup from "./pages/Setup";
 
 // Wrapper for protected admin routes
-function ProtectedAdminRoute({ component: Component }: { component: React.ComponentType }) {
+function ProtectedAdminRoute({
+  component: Component,
+}: {
+  component: React.ComponentType;
+}) {
   return (
     <AdminAuthGuard>
       <Component />
@@ -29,12 +35,14 @@ function Router() {
     <Switch>
       {/* Public Routes */}
       <Route path="/" component={Catalog} />
+      <Route path="/catalog-lab" component={CatalogLab} />
       <Route path="/container/:id" component={ContainerDetail} />
-      
+      <Route path="/reserve/deal/:dealId" component={ReservedDealDetail} />
+
       {/* Admin Routes */}
       <Route path="/admin" component={AdminLogin} />
       <Route path="/admin/setup" component={Setup} />
-      
+
       {/* Protected Admin Routes - require authentication */}
       <Route path="/admin/dashboard">
         <ProtectedAdminRoute component={AdminDashboard} />
@@ -42,7 +50,7 @@ function Router() {
       <Route path="/admin/container/:id">
         <ProtectedAdminRoute component={AdminContainerEdit} />
       </Route>
-      
+
       {/* 404 */}
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
