@@ -83,6 +83,38 @@ async function fetchReservedDealById(dealId: number): Promise<DataLayerReservedD
   return response.data;
 }
 
+async function refreshReservedDealById(dealId: number): Promise<DataLayerReservedDealPayload | null> {
+  if (!DATA_LAYER_API_BASE_URL) {
+    return null;
+  }
+
+  try {
+    const response = await axios.post<{ ok: boolean; payload?: DataLayerReservedDealPayload }>(
+      `${DATA_LAYER_API_BASE_URL}/api/reservations/deal/${dealId}/refresh`,
+      {},
+      {
+        timeout: 15_000,
+        validateStatus: (status) => (status >= 200 && status < 300) || status === 409,
+      },
+    );
+
+    if (response.status === 409) {
+      return null;
+    }
+
+    if (response.data?.ok && response.data.payload) {
+      return response.data.payload;
+    }
+  } catch (error) {
+    console.warn("[reservations] targeted deal refresh failed, falling back to cached reservation payload", {
+      dealId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  return null;
+}
+
 async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
   const reservationContainers = Array.isArray(payload.containers) ? payload.containers : [];
 
@@ -790,14 +822,14 @@ export const appRouter = router({
     getByDealId: publicProcedure
       .input(z.object({ dealId: z.number().int().positive() }))
       .query(async ({ input }) => {
-        const payload = await fetchReservedDealById(input.dealId);
+        const payload = (await refreshReservedDealById(input.dealId)) ?? (await fetchReservedDealById(input.dealId));
         return buildReservedDealView(payload);
       }),
 
     getContainerByDealId: publicProcedure
       .input(z.object({ dealId: z.number().int().positive(), externalId: z.string().min(1) }))
       .query(async ({ input }) => {
-        const payload = await fetchReservedDealById(input.dealId);
+        const payload = (await refreshReservedDealById(input.dealId)) ?? (await fetchReservedDealById(input.dealId));
         const reservation = await buildReservedDealView(payload);
         const reservedContainer = reservation.containers.find(
           (item) => (item.externalId ?? item.containerNumber) === input.externalId,
