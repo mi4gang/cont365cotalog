@@ -7,9 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import AdminAuthGuard from "./components/AdminAuthGuard";
 
 // Pages
-// import Home from "./pages/Home"; // Removed - catalog is now homepage
 import Catalog from "./pages/Catalog";
-import CatalogLab from "./pages/CatalogLab";
 import ContainerDetail from "./pages/ContainerDetail";
 import ReservedDealDetail from "./pages/ReservedDealDetail";
 import AdminLogin from "./pages/AdminLogin";
@@ -35,7 +33,6 @@ function Router() {
     <Switch>
       {/* Public Routes */}
       <Route path="/" component={Catalog} />
-      <Route path="/catalog-lab" component={CatalogLab} />
       <Route path="/container/:id" component={ContainerDetail} />
       <Route path="/reserve/deal/:dealId" component={ReservedDealDetail} />
 
