@@ -367,7 +367,7 @@ export default function ContainerDetail() {
                       >
                         <p className="text-orange-200 text-xs sm:text-sm font-semibold mb-1">О поставке</p>
                         <p className="text-white text-xs sm:text-sm leading-relaxed">
-                          {container.description || serialSalesNote}
+                          {serialSalesNote}
                         </p>
                       </div>
                     ) : null}
