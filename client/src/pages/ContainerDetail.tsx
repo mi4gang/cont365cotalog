@@ -103,7 +103,17 @@ export default function ContainerDetail() {
         : `Здравствуйте! Меня интересует ${container.name} (ID: ${container.externalId})`;
 
     return `https://t.me/+79686922531?text=${encodeURIComponent(reservationText)}`;
-  }, [container, isReservedMode]);
+  }, [container, isReservedMode, reservation]);
+
+  const photos = useMemo(() => {
+    const seen = new Set<string>();
+    return (container?.photos || []).filter((photo) => {
+      const url = String(photo.url || "").trim();
+      if (!url || seen.has(url)) return false;
+      seen.add(url);
+      return true;
+    });
+  }, [container?.photos]);
 
   if (isLoading) {
     return (
@@ -135,15 +145,6 @@ export default function ContainerDetail() {
     );
   }
 
-  const photos = useMemo(() => {
-    const seen = new Set<string>();
-    return (container.photos || []).filter((photo) => {
-      const url = String(photo.url || "").trim();
-      if (!url || seen.has(url)) return false;
-      seen.add(url);
-      return true;
-    });
-  }, [container.photos]);
   const currentPhoto = photos[currentPhotoIndex];
 
   const nextPhoto = () => {
