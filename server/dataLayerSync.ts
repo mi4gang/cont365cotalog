@@ -149,9 +149,19 @@ function normalizeCondition(value: unknown): "new" | "used" {
 
 function normalizePhotoUrls(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
+  const unique = new Set<string>();
   return value
     .map((item) => String(item ?? "").trim())
-    .filter((url) => /^https?:\/\//i.test(url));
+    .filter((url) => {
+      if (!/^https?:\/\//i.test(url)) return false;
+      if (unique.has(url)) return false;
+      unique.add(url);
+      return true;
+    });
+}
+
+function getSerialSalesDescription(): string {
+  return "На фото показан пример контейнера этой модели. В наличии несколько одинаковых контейнеров. Перед отгрузкой отправим номер и видео именно того контейнера, который поедет к вам.";
 }
 
 function sleep(ms: number): Promise<void> {
@@ -330,6 +340,7 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
       processedExternalIds.push(externalId);
       const photos = normalizePhotoUrls(row.photos);
       const bitrixProductId = normalizeBitrixProductId(row.bitrixProductId);
+      const serial = toBoolean(row.serial);
       const payload = {
         externalId,
         bitrixProductId,
@@ -337,9 +348,11 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
         size: normalizeSize(row.containerType),
         condition: normalizeCondition(row.condition),
         price: toNumber(row.price) > 0 ? String(toNumber(row.price)) : undefined,
-        description: String(row.description ?? "").trim() || undefined,
+        description: serial
+          ? getSerialSalesDescription()
+          : String(row.description ?? "").trim() || undefined,
         terminalLocation: String(row.terminal ?? "").trim() || undefined,
-        serial: toBoolean(row.serial),
+        serial,
         isActive: row.isActive !== false,
       } as const;
 

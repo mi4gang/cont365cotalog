@@ -87,7 +87,7 @@ export default function ContainerDetail() {
   const backHref = isReservedMode ? `/reserve/deal/${dealId}` : "/";
   const backLabel = isReservedMode ? "Вернуться к брони" : "Назад в каталог";
   const serialSalesNote =
-    "В каталоге показан образец новой модели. После подтверждения заказа менеджер подберет идентичный контейнер, направит его номер, фото и видеоотчет.";
+    "На фото показан пример контейнера этой модели. В наличии несколько одинаковых контейнеров. Перед отгрузкой отправим номер и видео именно того контейнера, который поедет к вам.";
 
   const telegramUrl = useMemo(() => {
     if (!container) return "https://t.me/+79686922531";
@@ -135,7 +135,15 @@ export default function ContainerDetail() {
     );
   }
 
-  const photos = container.photos || [];
+  const photos = useMemo(() => {
+    const seen = new Set<string>();
+    return (container.photos || []).filter((photo) => {
+      const url = String(photo.url || "").trim();
+      if (!url || seen.has(url)) return false;
+      seen.add(url);
+      return true;
+    });
+  }, [container.photos]);
   const currentPhoto = photos[currentPhotoIndex];
 
   const nextPhoto = () => {
@@ -244,7 +252,7 @@ export default function ContainerDetail() {
               <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">Контейнер {container.name}</h1>
               {container.serial ? (
                 <div className="mt-3 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ background: "rgba(249, 115, 22, 0.92)" }}>
-                  Поставка под заказ
+                  Как на фото
                 </div>
               ) : null}
             </div>
@@ -357,7 +365,7 @@ export default function ContainerDetail() {
                           border: "1px solid rgba(251, 146, 60, 0.35)",
                         }}
                       >
-                        <p className="text-orange-200 text-xs sm:text-sm font-semibold mb-1">Серийная позиция</p>
+                        <p className="text-orange-200 text-xs sm:text-sm font-semibold mb-1">О поставке</p>
                         <p className="text-white text-xs sm:text-sm leading-relaxed">
                           {container.description || serialSalesNote}
                         </p>
@@ -389,9 +397,9 @@ export default function ContainerDetail() {
                       </div>
                     ) : (
                       <div className="pb-3 mb-3" style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.15)" }}>
-                        <p className="text-slate-400 text-xs sm:text-sm mb-1">Формат поставки</p>
+                        <p className="text-slate-400 text-xs sm:text-sm mb-1">Поставка</p>
                         <p className="text-white font-medium text-sm sm:text-base">
-                          Подбираем идентичный новый контейнер после подтверждения заказа
+                          Перед отгрузкой отправим номер и видео контейнера
                         </p>
                       </div>
                     )}
