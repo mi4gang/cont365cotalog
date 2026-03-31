@@ -18,6 +18,8 @@ interface DataLayerCatalogItem {
   price?: number | string;
   containerType?: string | null;
   condition?: string | null;
+  description?: string | null;
+  serial?: boolean | string | number | null;
   photos?: string[];
   isActive?: boolean;
 }
@@ -124,6 +126,13 @@ function normalizeBitrixProductId(raw: unknown): number | undefined {
   const value = Number(raw);
   if (!Number.isInteger(value) || value <= 0) return undefined;
   return value;
+}
+
+function toBoolean(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  const raw = String(value ?? "").trim().toLowerCase();
+  return raw === "true" || raw === "1" || raw === "y" || raw === "yes";
 }
 
 function normalizeSize(value: unknown): string {
@@ -239,6 +248,7 @@ async function fetchCatalogPayloadFromDataLayer(): Promise<{ items: DataLayerCat
           terminal: row.terminal,
           price: row.recommendedPrice,
           photos: undefined,
+          serial: false,
           isActive: true,
         }));
       return {
@@ -327,8 +337,9 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
         size: normalizeSize(row.containerType),
         condition: normalizeCondition(row.condition),
         price: toNumber(row.price) > 0 ? String(toNumber(row.price)) : undefined,
-        description: undefined,
+        description: String(row.description ?? "").trim() || undefined,
         terminalLocation: String(row.terminal ?? "").trim() || undefined,
+        serial: toBoolean(row.serial),
         isActive: row.isActive !== false,
       } as const;
 

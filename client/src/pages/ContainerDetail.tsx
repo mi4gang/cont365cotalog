@@ -86,6 +86,8 @@ export default function ContainerDetail() {
 
   const backHref = isReservedMode ? `/reserve/deal/${dealId}` : "/";
   const backLabel = isReservedMode ? "Вернуться к брони" : "Назад в каталог";
+  const serialSalesNote =
+    "В каталоге показан образец новой модели. После подтверждения заказа менеджер подберет идентичный контейнер, направит его номер, фото и видеоотчет.";
 
   const telegramUrl = useMemo(() => {
     if (!container) return "https://t.me/+79686922531";
@@ -96,7 +98,9 @@ export default function ContainerDetail() {
           `Сделка #${reservation.dealId}`,
           `Контейнер: ${container.name}`,
         ].join("\n")
-      : `Здравствуйте! Меня интересует ${container.name} (ID: ${container.externalId})`;
+      : container.serial
+        ? `Здравствуйте! Меня интересует ${container.name}.`
+        : `Здравствуйте! Меня интересует ${container.name} (ID: ${container.externalId})`;
 
     return `https://t.me/+79686922531?text=${encodeURIComponent(reservationText)}`;
   }, [container, isReservedMode]);
@@ -238,6 +242,11 @@ export default function ContainerDetail() {
           ) : (
             <div className="mb-4 sm:mb-6">
               <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">Контейнер {container.name}</h1>
+              {container.serial ? (
+                <div className="mt-3 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ background: "rgba(249, 115, 22, 0.92)" }}>
+                  Поставка под заказ
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -340,6 +349,21 @@ export default function ContainerDetail() {
 
                 <div className="flex-1 flex flex-col justify-between">
                   <div>
+                    {container.serial ? (
+                      <div
+                        className="rounded-lg p-4 mb-4"
+                        style={{
+                          background: "linear-gradient(135deg, rgba(249, 115, 22, 0.18) 0%, rgba(251, 146, 60, 0.12) 100%)",
+                          border: "1px solid rgba(251, 146, 60, 0.35)",
+                        }}
+                      >
+                        <p className="text-orange-200 text-xs sm:text-sm font-semibold mb-1">Серийная позиция</p>
+                        <p className="text-white text-xs sm:text-sm leading-relaxed">
+                          {container.description || serialSalesNote}
+                        </p>
+                      </div>
+                    ) : null}
+
                     <div className="pb-3 mb-3" style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.15)" }}>
                       <p className="text-slate-400 text-xs sm:text-sm mb-1">Размер</p>
                       <p className="text-white font-medium text-sm sm:text-base">{container.size}</p>
@@ -358,10 +382,19 @@ export default function ContainerDetail() {
                       </span>
                     </div>
 
-                    <div className="pb-3 mb-3" style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.15)" }}>
-                      <p className="text-slate-400 text-xs sm:text-sm mb-1">ID контейнера</p>
-                      <p className="text-white font-medium text-sm sm:text-base">{container.externalId}</p>
-                    </div>
+                    {!container.serial ? (
+                      <div className="pb-3 mb-3" style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.15)" }}>
+                        <p className="text-slate-400 text-xs sm:text-sm mb-1">ID контейнера</p>
+                        <p className="text-white font-medium text-sm sm:text-base">{container.externalId}</p>
+                      </div>
+                    ) : (
+                      <div className="pb-3 mb-3" style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.15)" }}>
+                        <p className="text-slate-400 text-xs sm:text-sm mb-1">Формат поставки</p>
+                        <p className="text-white font-medium text-sm sm:text-base">
+                          Подбираем идентичный новый контейнер после подтверждения заказа
+                        </p>
+                      </div>
+                    )}
 
                     {container.terminalLocation && (
                       <div className="pb-3 mb-3" style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.15)" }}>
@@ -385,7 +418,7 @@ export default function ContainerDetail() {
                       </div>
                     ) : null}
 
-                    {container.description && (
+                    {container.description && !container.serial && (
                       <div className="pb-3 mb-3" style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.15)" }}>
                         <p className="text-slate-400 text-xs sm:text-sm mb-1">Детальное описание</p>
                         <p className="text-white text-xs sm:text-sm leading-relaxed">{container.description}</p>

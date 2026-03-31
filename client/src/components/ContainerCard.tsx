@@ -14,6 +14,7 @@ interface ContainerCardProps {
   badgeTone?: "default" | "reserved";
   detailNote?: string | null;
   actionLabel?: string;
+  serial?: boolean;
 }
 
 export default function ContainerCard({
@@ -30,6 +31,7 @@ export default function ContainerCard({
   badgeTone = "default",
   detailNote,
   actionLabel = "Смотреть",
+  serial = false,
 }: ContainerCardProps) {
   const formatPrice = (price: string | null) => {
     if (!price) return "Цена по запросу";
@@ -80,6 +82,15 @@ export default function ContainerCard({
             </svg>
           </div>
         )}
+
+        {serial ? (
+          <div
+            className="absolute top-3 left-3 text-[11px] font-semibold px-3 py-1 rounded-full"
+            style={{ background: "rgba(249, 115, 22, 0.92)", color: "#fff" }}
+          >
+            Под заказ
+          </div>
+        ) : null}
         
         {/* Status Badge - more visible colors */}
         <div 
@@ -97,6 +108,11 @@ export default function ContainerCard({
       <div className="flex-1 p-3 sm:p-4 flex flex-col justify-between">
         {/* Title now part of card content */}
         <h3 className="text-white font-bold text-base sm:text-lg line-clamp-1 mb-2">{name}</h3>
+        {serial ? (
+          <p className="text-slate-300/90 text-xs sm:text-sm leading-relaxed mb-3 line-clamp-2">
+            Показываем образец новой модели. После заказа подберем идентичный контейнер и пришлем номер с фотоотчетом.
+          </p>
+        ) : null}
         {detailNote ? (
           <div className="text-xs sm:text-sm font-medium text-amber-200 mb-3">{detailNote}</div>
         ) : null}
