@@ -79,6 +79,61 @@ function normalizePositiveInteger(value: unknown): number {
   return normalized;
 }
 
+async function loadSerialReservationFallback(
+  dealId: number,
+): Promise<DataLayerReservedDealContainer[]> {
+  const [rows] = await db.execute(
+    `
+      SELECT
+        dp.id,
+        dp.product_id AS bitrixProductId,
+        COALESCE(NULLIF(TRIM(p.name), ''), NULLIF(TRIM(dp.product_name), ''), CONCAT('ID ', COALESCE(dp.product_id, dp.id))) AS containerNumber,
+        NULLIF(TRIM(p.container_type), '') AS containerType,
+        COALESCE(dp.quantity, 0) AS quantity,
+        COALESCE(dp.reserve_quantity, 0) AS reserveQuantity,
+        COALESCE(NULLIF(TRIM(s.title), ''), 'Не указан') AS terminal,
+        CAST(COALESCE(dp.cost, 0) AS DECIMAL(12,2)) AS cost,
+        CAST(COALESCE(dp.price, 0) AS DECIMAL(12,2)) AS recommendedPrice,
+        dp.reserve_start AS reserveStart,
+        dp.reserve_end AS reserveEnd
+      FROM b_deal_products dp
+      INNER JOIN b_deals d ON d.id = dp.deal_id
+      LEFT JOIN b_products p ON p.id = dp.product_id
+      LEFT JOIN b_stores s ON s.id = COALESCE(dp.store_id, p.store_id)
+      WHERE dp.deal_id = ?
+        AND d.stage_semantic_id = 'P'
+        AND COALESCE(dp.reserve_quantity, 0) > 0
+        AND (
+          dp.reserve_end IS NULL
+          OR dp.reserve_end >= CURDATE()
+        )
+        AND COALESCE(p.serial, '') = 'Y'
+      ORDER BY
+        CASE WHEN dp.reserve_end IS NULL THEN 1 ELSE 0 END,
+        dp.reserve_end ASC,
+        dp.id ASC
+    `,
+    [dealId],
+  );
+
+  const resultRows = Array.isArray(rows) ? rows : [];
+  return resultRows.map((row: any) => ({
+    id: String(row.id),
+    bitrixProductId: Number.isInteger(row.bitrixProductId)
+      ? Number(row.bitrixProductId)
+      : (row.bitrixProductId != null ? Number(row.bitrixProductId) : null),
+    containerNumber: row.containerNumber ?? undefined,
+    containerType: row.containerType ?? null,
+    serial: true,
+    quantity: normalizePositiveInteger(row.reserveQuantity ?? row.quantity),
+    terminal: row.terminal ?? "Не указан",
+    cost: row.cost != null ? Number(row.cost) : undefined,
+    recommendedPrice: row.recommendedPrice != null ? Number(row.recommendedPrice) : undefined,
+    reserveStart: row.reserveStart ?? null,
+    reserveEnd: row.reserveEnd ?? null,
+  }));
+}
+
 async function fetchReservedDealById(dealId: number): Promise<DataLayerReservedDealPayload> {
   if (!DATA_LAYER_API_BASE_URL) {
     throw new Error("DATA_LAYER_API_BASE_URL is not configured");
@@ -129,8 +184,14 @@ async function refreshReservedDealById(dealId: number): Promise<DataLayerReserve
 
 async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
   const reservationContainers = Array.isArray(payload.containers) ? payload.containers : [];
+  const serialFallbackContainers = await loadSerialReservationFallback(payload.dealId);
+  const mergedReservationContainers = Array.from(
+    new Map(
+      [...reservationContainers, ...serialFallbackContainers].map((item) => [String(item.id), item]),
+    ).values(),
+  );
 
-  const bitrixIds = reservationContainers
+  const bitrixIds = mergedReservationContainers
     .map((item) => item.bitrixProductId)
     .filter((value): value is number => Number.isInteger(value) && Number(value) > 0);
 
@@ -140,7 +201,7 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
     .map((item) => [Number(item.bitrixProductId), item]));
 
   const containers: ReservedDealContainerView[] = await Promise.all(
-    reservationContainers.map(async (item) => {
+    mergedReservationContainers.map(async (item) => {
       const bitrixProductId = Number.isInteger(item.bitrixProductId)
         ? Number(item.bitrixProductId)
         : null;
@@ -179,10 +240,11 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
   );
 
   const totalQuantity = containers.reduce((sum, item) => sum + normalizePositiveInteger(item.quantity), 0);
+  const active = payload.active || containers.length > 0;
 
   return {
-    active: payload.active,
-    state: payload.state ?? (payload.active ? "active" : "reserve_not_active"),
+    active,
+    state: active ? "active" : (payload.state ?? "reserve_not_active"),
     dealId: payload.dealId,
     dealName: payload.dealName ?? `Сделка ${payload.dealId}`,
     dealUrl: payload.dealUrl ?? null,
