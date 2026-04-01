@@ -87,7 +87,7 @@ export default function ContainerDetail() {
   const backHref = isReservedMode ? `/reserve/deal/${dealId}` : "/";
   const backLabel = isReservedMode ? "Вернуться к брони" : "Назад в каталог";
   const serialSalesNote =
-    "На фото показан пример контейнера этой модели. В наличии несколько одинаковых контейнеров. Перед отгрузкой отправим номер и видео именно того контейнера, который поедет к вам.";
+    "На фото показан идентичный контейнер этой модели. Это новая типовая позиция: такие контейнеры есть в наличии в количестве, а под поставку подбирается такой же контейнер по этой модели.";
 
   const telegramUrl = useMemo(() => {
     if (!container) return "https://t.me/+79686922531";
@@ -400,7 +400,7 @@ export default function ContainerDetail() {
                       <div className="pb-3 mb-3" style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.15)" }}>
                         <p className="text-slate-400 text-xs sm:text-sm mb-1">Поставка</p>
                         <p className="text-white font-medium text-sm sm:text-base">
-                          Перед отгрузкой отправим номер и видео контейнера
+                          Подбирается идентичный контейнер этой модели
                         </p>
                       </div>
                     )}
