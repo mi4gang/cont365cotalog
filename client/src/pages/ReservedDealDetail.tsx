@@ -23,6 +23,11 @@ function buildTelegramUrl(dealId: number) {
   return `https://t.me/+79686922531?text=${message}`;
 }
 
+function formatQuantity(value?: number | null) {
+  const quantity = Number.isInteger(value) && Number(value) > 0 ? Number(value) : 1;
+  return `${quantity} шт.`;
+}
+
 export default function ReservedDealDetail() {
   const params = useParams<{ dealId: string }>();
   const dealId = parseInt(params.dealId || "0", 10);
@@ -38,6 +43,8 @@ export default function ReservedDealDetail() {
   }, [data]);
 
   const hasActiveContainers = !!data?.active && (data?.containers?.length ?? 0) > 0;
+  const reservedPositionsCount = data?.containers.length ?? 0;
+  const reservedTotalQuantity = data?.totalQuantity ?? 0;
 
   if (isLoading) {
     return (
@@ -134,7 +141,10 @@ export default function ReservedDealDetail() {
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 p-4">
                   <div className="text-xs uppercase tracking-[0.12em] text-slate-400 mb-1">Контейнеров в брони</div>
-                  <div className="text-white text-2xl font-bold">{data.containers.length}</div>
+                  <div className="text-white text-2xl font-bold">{reservedTotalQuantity}</div>
+                  <div className="text-slate-300 text-sm mt-1">
+                    {reservedPositionsCount} поз. в сделке
+                  </div>
                 </div>
               </div>
 
@@ -171,10 +181,15 @@ export default function ReservedDealDetail() {
                   price={container.price}
                   mainPhoto={container.mainPhoto}
                   terminalLocation={container.terminal}
+                  serial={container.serial}
                   href={`/reserve/deal/${data.dealId}/container/${encodeURIComponent(container.externalId ?? container.containerNumber)}`}
                   badgeText="В брони"
                   badgeTone="reserved"
-                  detailNote={container.reserveEnd ? `Срок брони до ${formatDate(container.reserveEnd)}` : "Срок брони уточняется"}
+                  detailNote={
+                    container.reserveEnd
+                      ? `В брони: ${formatQuantity(container.quantity)} · до ${formatDate(container.reserveEnd)}`
+                      : `В брони: ${formatQuantity(container.quantity)}`
+                  }
                   actionLabel="Открыть"
                 />
               ))}

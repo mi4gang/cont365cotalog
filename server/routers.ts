@@ -26,6 +26,8 @@ interface DataLayerReservedDealContainer {
   bitrixProductId?: number | null;
   containerNumber?: string;
   containerType?: string | null;
+  serial?: boolean | null;
+  quantity?: number | null;
   terminal?: string;
   cost?: number;
   recommendedPrice?: number;
@@ -59,12 +61,22 @@ interface ReservedDealContainerView {
   containerType: string | null;
   condition: "new" | "used" | null;
   terminal: string;
+  serial: boolean;
+  quantity: number;
   price: string | null;
   reserveStart: string | null;
   reserveEnd: string | null;
   reserveDays: number | null;
   mainPhoto: string | null;
   description: string | null;
+}
+
+function normalizePositiveInteger(value: unknown): number {
+  const normalized = Number(value);
+  if (!Number.isInteger(normalized) || normalized <= 0) {
+    return 1;
+  }
+  return normalized;
 }
 
 async function fetchReservedDealById(dealId: number): Promise<DataLayerReservedDealPayload> {
@@ -132,6 +144,7 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
       const bitrixProductId = Number.isInteger(item.bitrixProductId)
         ? Number(item.bitrixProductId)
         : null;
+      const quantity = normalizePositiveInteger(item.quantity);
       const catalogContainer = bitrixProductId
         ? (
             catalogByBitrixId.get(bitrixProductId) ??
@@ -153,6 +166,8 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
         containerType: item.containerType ?? catalogContainer?.size ?? null,
         condition: catalogContainer?.condition ?? null,
         terminal: item.terminal ?? catalogContainer?.terminalLocation ?? "Не указан",
+        serial: Boolean(catalogContainer?.serial ?? item.serial ?? false),
+        quantity,
         price: catalogContainer?.price ?? (item.recommendedPrice != null ? String(item.recommendedPrice) : null),
         reserveStart: item.reserveStart ?? null,
         reserveEnd: item.reserveEnd ?? null,
@@ -162,6 +177,8 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
       };
     }),
   );
+
+  const totalQuantity = containers.reduce((sum, item) => sum + normalizePositiveInteger(item.quantity), 0);
 
   return {
     active: payload.active,
@@ -173,6 +190,7 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
     contactPhone: payload.contactPhone ?? "",
     managerName: payload.managerName ?? "Не указан",
     generatedAt: payload.generatedAt ?? null,
+    totalQuantity,
     containers,
   };
 }
@@ -862,6 +880,8 @@ export const appRouter = router({
             contactName: reservation.contactName,
             contactPhone: reservation.contactPhone,
             managerName: reservation.managerName,
+            totalQuantity: reservation.totalQuantity,
+            quantity: reservedContainer.quantity,
             reserveStart: reservedContainer.reserveStart,
             reserveEnd: reservedContainer.reserveEnd,
             reserveDays: reservedContainer.reserveDays,

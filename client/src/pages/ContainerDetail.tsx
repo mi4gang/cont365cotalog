@@ -22,6 +22,11 @@ function formatDate(value?: string | null) {
   }).format(date);
 }
 
+function formatQuantity(value?: number | null) {
+  const quantity = Number.isInteger(value) && Number(value) > 0 ? Number(value) : 1;
+  return `${quantity} шт.`;
+}
+
 export default function ContainerDetail() {
   const params = useParams<{ id?: string; externalId?: string; dealId?: string }>();
   const containerId = parseInt(params.id || "0", 10);
@@ -97,6 +102,7 @@ export default function ContainerDetail() {
           `Здравствуйте! Хочу обсудить бронь контейнера ${container.name}.`,
           `Сделка #${reservation.dealId}`,
           `Контейнер: ${container.name}`,
+          `Количество: ${formatQuantity(reservation.quantity)}`,
         ].join("\n")
       : container.serial
         ? `Здравствуйте! Меня интересует ${container.name}.`
@@ -236,7 +242,7 @@ export default function ContainerDetail() {
                       : ""}
                   </p>
                 </div>
-                <div className="grid sm:grid-cols-2 gap-3 min-w-0 lg:min-w-[360px]">
+                <div className="grid sm:grid-cols-3 gap-3 min-w-0 lg:min-w-[520px]">
                   <div className="rounded-xl border border-white/10 bg-white/5 p-4">
                     <div className="text-xs uppercase tracking-[0.12em] text-slate-400 mb-1">Телефон клиента</div>
                     <div className="text-white font-semibold">{reservation.contactPhone || "Не указан"}</div>
@@ -244,6 +250,13 @@ export default function ContainerDetail() {
                   <div className="rounded-xl border border-white/10 bg-white/5 p-4">
                     <div className="text-xs uppercase tracking-[0.12em] text-slate-400 mb-1">Менеджер</div>
                     <div className="text-white font-semibold">{reservation.managerName || "Не указан"}</div>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs uppercase tracking-[0.12em] text-slate-400 mb-1">Количество в брони</div>
+                    <div className="text-white font-semibold">{formatQuantity(reservation.quantity)}</div>
+                    <div className="text-slate-300 text-sm mt-1">
+                      Всего по сделке: {formatQuantity(reservation.totalQuantity)}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -411,6 +424,18 @@ export default function ContainerDetail() {
                         <p className="text-white font-medium text-sm sm:text-base">{container.terminalLocation}</p>
                       </div>
                     )}
+
+                    {isReservedMode && reservation ? (
+                      <div className="pb-3 mb-3" style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.15)" }}>
+                        <p className="text-slate-400 text-xs sm:text-sm mb-1">Количество в брони</p>
+                        <p className="text-white font-medium text-sm sm:text-base">
+                          {formatQuantity(reservation.quantity)}
+                        </p>
+                        <div className="text-slate-300 text-xs sm:text-sm mt-2">
+                          Всего в этой сделке зарезервировано: {formatQuantity(reservation.totalQuantity)}
+                        </div>
+                      </div>
+                    ) : null}
 
                     {isReservedMode && reservation ? (
                       <div className="pb-3 mb-3" style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.15)" }}>
