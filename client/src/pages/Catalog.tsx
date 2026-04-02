@@ -89,73 +89,51 @@ export default function Catalog() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Initialize from URL or localStorage
   useEffect(() => {
-    if (!availableSizes || !availableTerminals) return; // Wait for mappings to be ready
+    if (!availableSizes || !availableTerminals) return;
     if (isInitialized) return;
 
     const params = new URLSearchParams(window.location.search);
-    const hasUrlParams = params.toString().length > 0;
-    
-    // 1. Try URL first
-    const urlSizeIds = params.get("s")?.split(",").filter(Boolean) || [];
-    let initialSizes = urlSizeIds.map(id => mappings.idToSize[id]).filter((s): s is string => !!s);
-    
-    const urlTerminalIds = params.get("t")?.split(",").filter(Boolean) || [];
-    let initialTerminals = urlTerminalIds.map(id => mappings.idToTerminal[id]).filter((t): t is string => !!t);
-    
-    let initialCondition = params.get("c");
-    let initialPriceFrom = params.get("pf");
-    let initialPriceTo = params.get("pt");
-    let initialSearch = params.get("q");
 
-    // 2. If no URL params, try localStorage
-    if (!hasUrlParams) {
-      try {
-        const saved = localStorage.getItem('catalog_filters');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          initialSizes = parsed.sizes || [];
-          initialTerminals = parsed.terminals || [];
-          initialCondition = parsed.condition || "all";
-          initialPriceFrom = parsed.priceFrom || "";
-          initialPriceTo = parsed.priceTo || "";
-          initialSearch = parsed.search || "";
-        }
-      } catch (e) {
-        console.error("Failed to load filters from localStorage", e);
-      }
-    }
+    const initialSizes = (params.get("s")?.split(",").filter(Boolean) || [])
+      .map(id => mappings.idToSize[id])
+      .filter((size): size is string => !!size);
 
-    // Apply values
+    const initialTerminals = (params.get("t")?.split(",").filter(Boolean) || [])
+      .map(id => mappings.idToTerminal[id])
+      .filter((terminal): terminal is string => !!terminal);
+
+    const initialCondition = params.get("c");
+    const initialPriceFrom = params.get("pf");
+    const initialPriceTo = params.get("pt");
+    const initialSearch = params.get("q");
+
     if (initialSizes.length > 0) setSizeFilters(initialSizes);
     if (initialTerminals.length > 0) setTerminalFilters(initialTerminals);
     if (initialCondition) setConditionFilter(initialCondition);
     if (initialPriceFrom) {
       setPriceFrom(initialPriceFrom);
-      const val = parseFloat(initialPriceFrom);
-      if (!isNaN(val)) setSliderValues(prev => [val, prev[1]]);
+      const value = parseFloat(initialPriceFrom);
+      if (!isNaN(value)) setSliderValues(prev => [value, prev[1]]);
     }
     if (initialPriceTo) {
       setPriceTo(initialPriceTo);
-      const val = parseFloat(initialPriceTo);
-      if (!isNaN(val)) setSliderValues(prev => [prev[0], val]);
+      const value = parseFloat(initialPriceTo);
+      if (!isNaN(value)) setSliderValues(prev => [prev[0], value]);
     }
     if (initialSearch) setSearchQuery(initialSearch);
 
     setIsInitialized(true);
   }, [availableSizes, availableTerminals, mappings, isInitialized]);
 
-  // Sync to URL using IDs
   useEffect(() => {
     if (!isInitialized) return;
 
     const params = new URLSearchParams();
-    
-    // Map strings to IDs for URL
+
     if (sizeFilters.length > 0) {
       const ids = sizeFilters
-        .map(s => mappings.sizeToId[s])
+        .map(size => mappings.sizeToId[size])
         .filter(Boolean)
         .join(",");
       if (ids) params.set("s", ids);
@@ -163,7 +141,7 @@ export default function Catalog() {
 
     if (terminalFilters.length > 0) {
       const ids = terminalFilters
-        .map(t => mappings.terminalToId[t])
+        .map(terminal => mappings.terminalToId[terminal])
         .filter(Boolean)
         .join(",");
       if (ids) params.set("t", ids);
@@ -175,24 +153,11 @@ export default function Catalog() {
     if (searchQuery) params.set("q", searchQuery);
 
     const queryString = params.toString();
-    const newUrl = queryString ? `?${queryString}` : window.location.pathname;
-    
-    if (window.location.search !== (queryString ? `?${queryString}` : "")) {
-      window.history.replaceState({}, "", newUrl);
-    }
+    const nextUrl = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname;
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
 
-    // Save to localStorage for persistence between page transitions
-    try {
-      localStorage.setItem('catalog_filters', JSON.stringify({
-        sizes: sizeFilters,
-        terminals: terminalFilters,
-        condition: conditionFilter,
-        priceFrom,
-        priceTo,
-        search: searchQuery
-      }));
-    } catch (e) {
-      console.error("Failed to save filters to localStorage", e);
+    if (currentUrl !== nextUrl) {
+      window.history.replaceState({}, "", nextUrl);
     }
   }, [sizeFilters, conditionFilter, terminalFilters, priceFrom, priceTo, searchQuery, isInitialized, mappings]);
 
