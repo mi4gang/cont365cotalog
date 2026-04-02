@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import CatalogHeader from "@/components/CatalogHeader";
+import { buildContainerTitle, normalizeContainerDisplayName } from "@shared/containerNaming";
 import { ChevronLeft, ChevronRight, Loader2, X, CalendarClock, Phone } from "lucide-react";
 
 function formatPrice(price: string | null) {
@@ -93,23 +94,29 @@ export default function ContainerDetail() {
   const backLabel = isReservedMode ? "Вернуться к брони" : "Назад в каталог";
   const serialSalesNote =
     "На фото показан идентичный контейнер этой модели. Это новая типовая позиция: такие контейнеры есть в наличии в количестве, а под поставку подбирается такой же контейнер по этой модели.";
+  const displayName = container
+    ? normalizeContainerDisplayName(container.name, container.size, container.serial)
+    : "";
+  const title = container
+    ? buildContainerTitle(container.name, container.size, container.serial)
+    : "Контейнер";
 
   const telegramUrl = useMemo(() => {
     if (!container) return "https://t.me/+79686922531";
 
     const reservationText = isReservedMode && reservation
       ? [
-          `Здравствуйте! Хочу обсудить бронь контейнера ${container.name}.`,
+          `Здравствуйте! Хочу обсудить бронь контейнера ${displayName}.`,
           `Сделка #${reservation.dealId}`,
-          `Контейнер: ${container.name}`,
+          `Контейнер: ${displayName}`,
           `Количество: ${formatQuantity(reservation.quantity)}`,
         ].join("\n")
       : container.serial
-        ? `Здравствуйте! Меня интересует ${container.name}.`
-        : `Здравствуйте! Меня интересует ${container.name} (ID: ${container.externalId})`;
+        ? `Здравствуйте! Меня интересует ${displayName}.`
+        : `Здравствуйте! Меня интересует ${displayName} (ID: ${container.externalId})`;
 
     return `https://t.me/+79686922531?text=${encodeURIComponent(reservationText)}`;
-  }, [container, isReservedMode, reservation]);
+  }, [container, displayName, isReservedMode, reservation]);
 
   const photos = useMemo(() => {
     const seen = new Set<string>();
@@ -234,7 +241,7 @@ export default function ContainerDetail() {
                   <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/20 border border-amber-300/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-amber-100 mb-3">
                     Бронь по сделке #{reservation.dealId}
                   </div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">Контейнер {container.name}</h1>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">{title}</h1>
                   <p className="text-slate-300">
                     Забронирован до {formatDate(reservation.reserveEnd)}.
                     {typeof reservation.reserveDays === "number"
@@ -263,7 +270,7 @@ export default function ContainerDetail() {
             </section>
           ) : (
             <div className="mb-4 sm:mb-6">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">Контейнер {container.name}</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">{title}</h1>
               {container.serial ? (
                 <div className="mt-3 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ background: "rgba(249, 115, 22, 0.92)" }}>
                   Как на фото
@@ -288,7 +295,7 @@ export default function ContainerDetail() {
                 {currentPhoto ? (
                   <img
                     src={currentPhoto.url}
-                    alt={`${container.name} - фото ${currentPhotoIndex + 1}`}
+                    alt={`${displayName} - фото ${currentPhotoIndex + 1}`}
                     className="w-full h-full object-cover"
                     style={{ objectPosition: "center center" }}
                     draggable={false}
@@ -530,7 +537,7 @@ export default function ContainerDetail() {
           >
             <img
               src={currentPhoto?.url}
-              alt={`${container.name} - фото ${currentPhotoIndex + 1}`}
+              alt={`${displayName} - фото ${currentPhotoIndex + 1}`}
               className="max-w-full max-h-full object-contain"
               style={{
                 minWidth: "50%",

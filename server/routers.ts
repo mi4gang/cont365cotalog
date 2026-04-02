@@ -6,6 +6,7 @@ import { SignJWT, jwtVerify } from "jose";
 import axios from "axios";
 import * as db from "./db";
 import { ContainerPhoto } from "../drizzle/schema";
+import { normalizeContainerDisplayName } from "../shared/containerNaming";
 import { downloadAndSaveImage } from "./localStorage";
 import * as cheerio from "cheerio";
 import {
@@ -215,19 +216,26 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
       const mainPhoto = catalogContainer
         ? await db.getMainPhotoByContainerId(catalogContainer.id)
         : undefined;
+      const serial = Boolean(catalogContainer?.serial ?? item.serial ?? false);
+      const size = catalogContainer?.size ?? item.containerType ?? null;
+      const name = normalizeContainerDisplayName(
+        catalogContainer?.name ?? item.containerNumber ?? `Контейнер ${item.id}`,
+        size,
+        serial,
+      );
 
       return {
         id: item.id,
         bitrixProductId,
         catalogContainerId: catalogContainer?.id ?? null,
         externalId: catalogContainer?.externalId ?? null,
-        name: catalogContainer?.name ?? item.containerNumber ?? `Контейнер ${item.id}`,
+        name: name || `Контейнер ${item.id}`,
         containerNumber: item.containerNumber ?? catalogContainer?.name ?? `Контейнер ${item.id}`,
-        size: catalogContainer?.size ?? item.containerType ?? null,
+        size,
         containerType: item.containerType ?? catalogContainer?.size ?? null,
         condition: catalogContainer?.condition ?? null,
         terminal: item.terminal ?? catalogContainer?.terminalLocation ?? "Не указан",
-        serial: Boolean(catalogContainer?.serial ?? item.serial ?? false),
+        serial,
         quantity,
         price: catalogContainer?.price ?? (item.recommendedPrice != null ? String(item.recommendedPrice) : null),
         reserveStart: item.reserveStart ?? null,
@@ -828,6 +836,7 @@ export const appRouter = router({
           const mainPhoto = await db.getMainPhotoByContainerId(container.id);
           containersWithPhotos.push({
             ...container,
+            name: normalizeContainerDisplayName(container.name, container.size, container.serial),
             mainPhoto: mainPhoto?.url || null,
           });
         }
@@ -851,6 +860,7 @@ export const appRouter = router({
 
         return {
           ...container,
+          name: normalizeContainerDisplayName(container.name, container.size, container.serial),
           photos,
         };
       }),
@@ -870,6 +880,7 @@ export const appRouter = router({
 
         return {
           ...container,
+          name: normalizeContainerDisplayName(container.name, container.size, container.serial),
           photos,
         };
       }),
@@ -934,6 +945,7 @@ export const appRouter = router({
 
         return {
           ...container,
+          name: normalizeContainerDisplayName(container.name, container.size, container.serial),
           photos,
           reservation: {
             dealId: reservation.dealId,

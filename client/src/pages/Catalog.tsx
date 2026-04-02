@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import CatalogHeader from "@/components/CatalogHeader";
 import ContainerCard from "@/components/ContainerCard";
+import { buildContainerTitle } from "@shared/containerNaming";
 import { Search, Loader2, ChevronDown } from "lucide-react";
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
@@ -402,7 +403,7 @@ export default function Catalog() {
           ) : containers && containers.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
               {containers.map((container) => (
-                <ContainerCard key={container.id} id={container.id} externalId={container.externalId} name={`Контейнер ${container.name}`} size={container.size} condition={container.condition} price={container.price} mainPhoto={container.mainPhoto} terminalLocation={container.terminalLocation} serial={container.serial} />
+                <ContainerCard key={container.id} id={container.id} externalId={container.externalId} name={buildContainerTitle(container.name, container.size, container.serial)} size={container.size} condition={container.condition} price={container.price} mainPhoto={container.mainPhoto} terminalLocation={container.terminalLocation} serial={container.serial} />
               ))}
             </div>
           ) : (

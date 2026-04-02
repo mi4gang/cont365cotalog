@@ -1,6 +1,7 @@
 import axios from "axios";
 import * as db from "./db";
 import { getCatalogWriteLockStatus, tryAcquireCatalogWriteLock } from "./catalogWriteLock";
+import { normalizeContainerDisplayName } from "../shared/containerNaming";
 import {
   buildContainerIdentityIndex,
   registerContainerIdentity,
@@ -341,10 +342,15 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
       const photos = normalizePhotoUrls(row.photos);
       const bitrixProductId = normalizeBitrixProductId(row.bitrixProductId);
       const serial = toBoolean(row.serial);
+      const normalizedName = normalizeContainerDisplayName(
+        serial ? (row.containerNumber ?? row.name ?? externalId) : (row.name ?? externalId),
+        row.containerType,
+        serial,
+      );
       const payload = {
         externalId,
         bitrixProductId,
-        name: String(row.name ?? externalId).trim() || externalId,
+        name: normalizedName || externalId,
         size: normalizeSize(row.containerType),
         condition: normalizeCondition(row.condition),
         price: toNumber(row.price) > 0 ? String(toNumber(row.price)) : undefined,

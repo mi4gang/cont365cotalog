@@ -4,6 +4,7 @@ import { Loader2, ArrowLeft, Package2 } from "lucide-react";
 import CatalogHeader from "@/components/CatalogHeader";
 import ContainerCard from "@/components/ContainerCard";
 import { trpc } from "@/lib/trpc";
+import { buildContainerTitle } from "@shared/containerNaming";
 
 function formatDate(value?: string | null) {
   if (!value) return "Не указан";
@@ -175,7 +176,7 @@ export default function ReservedDealDetail() {
                   key={container.id}
                   id={container.catalogContainerId ?? 0}
                   externalId={container.externalId ?? container.containerNumber}
-                  name={`Контейнер ${container.name}`}
+                  name={buildContainerTitle(container.name, container.size || container.containerType, container.serial)}
                   size={container.size || container.containerType || "Не указан"}
                   condition={container.condition ?? "used"}
                   price={container.price}
