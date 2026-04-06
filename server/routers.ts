@@ -36,6 +36,7 @@ interface DataLayerReservedDealContainer {
   reserveStart?: string | null;
   reserveEnd?: string | null;
   reserveDays?: number | null;
+  photos?: string[];
 }
 
 interface DataLayerReservedDealPayload {
@@ -70,6 +71,28 @@ interface ReservedDealContainerView {
   reserveDays: number | null;
   mainPhoto: string | null;
   description: string | null;
+}
+
+function buildFallbackPhotos(urls: string[] | undefined, containerId: number | null): ContainerPhoto[] {
+  const normalizedUrls = Array.from(
+    new Set((urls ?? []).map((url) => String(url || "").trim()).filter(Boolean)),
+  );
+
+  if (normalizedUrls.length === 0) {
+    return [];
+  }
+
+  const now = new Date();
+  return normalizedUrls.map((url, index) => ({
+    id: -(index + 1),
+    containerId: containerId ?? 0,
+    url,
+    displayOrder: index + 1,
+    isMain: index === 0,
+    originalName: null,
+    createdAt: now,
+    updatedAt: now,
+  }));
 }
 
 function normalizePositiveInteger(value: unknown): number {
@@ -216,6 +239,7 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
       const mainPhoto = catalogContainer
         ? await db.getMainPhotoByContainerId(catalogContainer.id)
         : undefined;
+      const fallbackPhotos = buildFallbackPhotos(item.photos, catalogContainer?.id ?? null);
       const serial = Boolean(catalogContainer?.serial ?? item.serial ?? false);
       const size = catalogContainer?.size ?? item.containerType ?? null;
       const name = normalizeContainerDisplayName(
@@ -241,7 +265,7 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
         reserveStart: item.reserveStart ?? null,
         reserveEnd: item.reserveEnd ?? null,
         reserveDays: item.reserveDays ?? null,
-        mainPhoto: mainPhoto?.url ?? null,
+        mainPhoto: mainPhoto?.url ?? fallbackPhotos[0]?.url ?? null,
         description: catalogContainer?.description ?? null,
       };
     }),
@@ -942,11 +966,12 @@ export const appRouter = router({
         }
 
         const photos = await db.getPhotosByContainerId(container.id);
+        const resolvedPhotos = photos.length > 0 ? photos : buildFallbackPhotos(reservedContainer.photos, container.id);
 
         return {
           ...container,
           name: normalizeContainerDisplayName(container.name, container.size, container.serial),
-          photos,
+          photos: resolvedPhotos,
           reservation: {
             dealId: reservation.dealId,
             dealName: reservation.dealName,
