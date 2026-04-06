@@ -73,6 +73,8 @@ interface ReservedDealContainerView {
   description: string | null;
 }
 
+const RESERVATION_REFRESH_MAX_AGE_MS = 90_000;
+
 function buildFallbackPhotos(urls: string[] | undefined, containerId: number | null): ContainerPhoto[] {
   const normalizedUrls = Array.from(
     new Set((urls ?? []).map((url) => String(url || "").trim()).filter(Boolean)),
@@ -93,6 +95,30 @@ function buildFallbackPhotos(urls: string[] | undefined, containerId: number | n
     createdAt: now,
     updatedAt: now,
   }));
+}
+
+function parseGeneratedAt(value?: string | null): number | null {
+  if (!value) return null;
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) return null;
+  return timestamp;
+}
+
+function isReservationPayloadFresh(payload: DataLayerReservedDealPayload): boolean {
+  const generatedAt = parseGeneratedAt(payload.generatedAt);
+  if (generatedAt == null) return false;
+  return (Date.now() - generatedAt) <= RESERVATION_REFRESH_MAX_AGE_MS;
+}
+
+function payloadContainsExternalId(
+  payload: DataLayerReservedDealPayload,
+  externalId: string,
+): boolean {
+  const containers = Array.isArray(payload.containers) ? payload.containers : [];
+  return containers.some((item) => {
+    const containerNumber = String(item.containerNumber ?? "").trim();
+    return containerNumber === externalId;
+  });
 }
 
 function normalizePositiveInteger(value: unknown): number {
@@ -204,6 +230,27 @@ async function refreshReservedDealById(dealId: number): Promise<DataLayerReserve
   }
 
   return null;
+}
+
+async function loadReservedDealPayload(
+  dealId: number,
+  options?: {
+    requireExternalId?: string;
+  },
+): Promise<DataLayerReservedDealPayload> {
+  const cachedPayload = await fetchReservedDealById(dealId);
+  const requiredExternalId = String(options?.requireExternalId ?? "").trim();
+
+  const hasRequiredContainer = requiredExternalId
+    ? payloadContainsExternalId(cachedPayload, requiredExternalId)
+    : true;
+
+  if (cachedPayload.active && hasRequiredContainer && isReservationPayloadFresh(cachedPayload)) {
+    return cachedPayload;
+  }
+
+  const refreshedPayload = await refreshReservedDealById(dealId);
+  return refreshedPayload ?? cachedPayload;
 }
 
 async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
@@ -937,14 +984,16 @@ export const appRouter = router({
     getByDealId: publicProcedure
       .input(z.object({ dealId: z.number().int().positive() }))
       .query(async ({ input }) => {
-        const payload = (await refreshReservedDealById(input.dealId)) ?? (await fetchReservedDealById(input.dealId));
+        const payload = await loadReservedDealPayload(input.dealId);
         return buildReservedDealView(payload);
       }),
 
     getContainerByDealId: publicProcedure
       .input(z.object({ dealId: z.number().int().positive(), externalId: z.string().min(1) }))
       .query(async ({ input }) => {
-        const payload = (await refreshReservedDealById(input.dealId)) ?? (await fetchReservedDealById(input.dealId));
+        const payload = await loadReservedDealPayload(input.dealId, {
+          requireExternalId: input.externalId,
+        });
         const reservation = await buildReservedDealView(payload);
         const reservedContainer = reservation.containers.find(
           (item) => (item.externalId ?? item.containerNumber) === input.externalId,
