@@ -28,6 +28,25 @@ function formatQuantity(value?: number | null) {
   return `${quantity} шт.`;
 }
 
+function getReservationDaysLeft(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const reserveEndStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  return Math.ceil((reserveEndStart - todayStart) / 86_400_000);
+}
+
+function formatReservationDaysLeft(value?: string | null) {
+  const daysLeft = getReservationDaysLeft(value);
+  if (daysLeft == null) return "Остаток брони не указан";
+  if (daysLeft < 0) return "Бронь истекла";
+  if (daysLeft === 0) return "Бронь истекает сегодня";
+  return `Осталось дней: ${daysLeft}`;
+}
+
 export default function ContainerDetail() {
   const params = useParams<{ id?: string; externalId?: string; dealId?: string }>();
   const containerId = parseInt(params.id || "0", 10);
@@ -243,10 +262,7 @@ export default function ContainerDetail() {
                   </div>
                   <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">{title}</h1>
                   <p className="text-slate-300">
-                    Забронирован до {formatDate(reservation.reserveEnd)}.
-                    {typeof reservation.reserveDays === "number"
-                      ? ` Срок брони: ${reservation.reserveDays} дн.`
-                      : ""}
+                    Забронирован до {formatDate(reservation.reserveEnd)}. {formatReservationDaysLeft(reservation.reserveEnd)}
                   </p>
                 </div>
                 <div className="grid sm:grid-cols-3 gap-3 min-w-0 lg:min-w-[520px]">
@@ -452,9 +468,7 @@ export default function ContainerDetail() {
                           До {formatDate(reservation.reserveEnd)}
                         </div>
                         <div className="text-slate-300 text-xs sm:text-sm mt-2">
-                          {typeof reservation.reserveDays === "number"
-                            ? `Длительность брони: ${reservation.reserveDays} дн.`
-                            : "Длительность брони не указана"}
+                          {formatReservationDaysLeft(reservation.reserveEnd)}
                         </div>
                       </div>
                     ) : null}
