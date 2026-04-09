@@ -121,7 +121,7 @@ export default function ReservedDealDetail() {
               <div className="space-y-3">
                 <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/20 border border-amber-300/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-amber-100">
                   <Package2 className="w-3.5 h-3.5" />
-                  Бронь контейнеров
+                  Бронь по сделке #{data.dealId}
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-bold text-white">Сделка #{data.dealId}</h1>
