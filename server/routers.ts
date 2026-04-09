@@ -87,6 +87,19 @@ function parseReservedCatalogContainerKey(value: string): number | null {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
+function normalizeReservedContainerLookupKey(value: string): string {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return normalized;
+  }
+
+  try {
+    return decodeURIComponent(normalized);
+  } catch {
+    return normalized;
+  }
+}
+
 function buildFallbackPhotos(urls: string[] | undefined, containerId: number | null): ContainerPhoto[] {
   const normalizedUrls = Array.from(
     new Set((urls ?? []).map((url) => String(url || "").trim()).filter(Boolean)),
@@ -1004,16 +1017,17 @@ export const appRouter = router({
     getContainerByDealId: publicProcedure
       .input(z.object({ dealId: z.number().int().positive(), externalId: z.string().min(1) }))
       .query(async ({ input }) => {
-        const catalogContainerId = parseReservedCatalogContainerKey(input.externalId);
+        const lookupKey = normalizeReservedContainerLookupKey(input.externalId);
+        const catalogContainerId = parseReservedCatalogContainerKey(lookupKey);
         const payload = await loadReservedDealPayload(
           input.dealId,
-          catalogContainerId ? undefined : { requireExternalId: input.externalId },
+          catalogContainerId ? undefined : { requireExternalId: lookupKey },
         );
         const reservation = await buildReservedDealView(payload);
         const reservedContainer = reservation.containers.find(
           (item) => catalogContainerId
             ? item.catalogContainerId === catalogContainerId
-            : (item.externalId ?? item.containerNumber) === input.externalId,
+            : (item.externalId ?? item.containerNumber) === lookupKey,
         );
 
         if (!reservation.active || !reservedContainer) {
@@ -1025,7 +1039,7 @@ export const appRouter = router({
 
         const container = catalogContainerId
           ? await db.getContainerById(catalogContainerId)
-          : await db.getContainerByExternalId(input.externalId);
+          : await db.getContainerByExternalId(lookupKey);
         if (!container) {
           throw new TRPCError({
             code: "NOT_FOUND",
