@@ -70,10 +70,22 @@ interface ReservedDealContainerView {
   reserveEnd: string | null;
   reserveDays: number | null;
   mainPhoto: string | null;
+  photos: string[];
   description: string | null;
 }
 
 const RESERVATION_REFRESH_MAX_AGE_MS = 90_000;
+const RESERVED_CATALOG_CONTAINER_KEY_PREFIX = "catalog-";
+
+function parseReservedCatalogContainerKey(value: string): number | null {
+  const normalized = String(value || "").trim();
+  if (!normalized.startsWith(RESERVED_CATALOG_CONTAINER_KEY_PREFIX)) {
+    return null;
+  }
+
+  const id = Number(normalized.slice(RESERVED_CATALOG_CONTAINER_KEY_PREFIX.length));
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
 
 function buildFallbackPhotos(urls: string[] | undefined, containerId: number | null): ContainerPhoto[] {
   const normalizedUrls = Array.from(
@@ -313,6 +325,7 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
         reserveEnd: item.reserveEnd ?? null,
         reserveDays: item.reserveDays ?? null,
         mainPhoto: mainPhoto?.url ?? fallbackPhotos[0]?.url ?? null,
+        photos: Array.from(new Set((item.photos ?? []).map((url) => String(url || "").trim()).filter(Boolean))),
         description: catalogContainer?.description ?? null,
       };
     }),
@@ -991,12 +1004,16 @@ export const appRouter = router({
     getContainerByDealId: publicProcedure
       .input(z.object({ dealId: z.number().int().positive(), externalId: z.string().min(1) }))
       .query(async ({ input }) => {
-        const payload = await loadReservedDealPayload(input.dealId, {
-          requireExternalId: input.externalId,
-        });
+        const catalogContainerId = parseReservedCatalogContainerKey(input.externalId);
+        const payload = await loadReservedDealPayload(
+          input.dealId,
+          catalogContainerId ? undefined : { requireExternalId: input.externalId },
+        );
         const reservation = await buildReservedDealView(payload);
         const reservedContainer = reservation.containers.find(
-          (item) => (item.externalId ?? item.containerNumber) === input.externalId,
+          (item) => catalogContainerId
+            ? item.catalogContainerId === catalogContainerId
+            : (item.externalId ?? item.containerNumber) === input.externalId,
         );
 
         if (!reservation.active || !reservedContainer) {
@@ -1006,7 +1023,9 @@ export const appRouter = router({
           });
         }
 
-        const container = await db.getContainerByExternalId(input.externalId);
+        const container = catalogContainerId
+          ? await db.getContainerById(catalogContainerId)
+          : await db.getContainerByExternalId(input.externalId);
         if (!container) {
           throw new TRPCError({
             code: "NOT_FOUND",

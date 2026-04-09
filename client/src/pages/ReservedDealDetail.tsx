@@ -183,7 +183,11 @@ export default function ReservedDealDetail() {
                   mainPhoto={container.mainPhoto}
                   terminalLocation={container.terminal}
                   serial={container.serial}
-                  href={`/reserve/deal/${data.dealId}/container/${encodeURIComponent(container.externalId ?? container.containerNumber)}`}
+                  href={`/reserve/deal/${data.dealId}/container/${encodeURIComponent(
+                    container.catalogContainerId
+                      ? `catalog-${container.catalogContainerId}`
+                      : (container.externalId ?? container.containerNumber),
+                  )}`}
                   badgeText="В брони"
                   badgeTone="reserved"
                   detailNote={
