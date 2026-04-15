@@ -1037,14 +1037,61 @@ export const appRouter = router({
           });
         }
 
-        const container = catalogContainerId
-          ? await db.getContainerById(catalogContainerId)
-          : await db.getContainerByExternalId(lookupKey);
+        const container =
+          (catalogContainerId
+            ? await db.getContainerById(catalogContainerId)
+            : undefined) ??
+          (reservedContainer.catalogContainerId && reservedContainer.catalogContainerId !== catalogContainerId
+            ? await db.getContainerById(reservedContainer.catalogContainerId)
+            : undefined) ??
+          (reservedContainer.bitrixProductId
+            ? (await db.getContainersByBitrixProductIds([reservedContainer.bitrixProductId]))[0]
+            : undefined) ??
+          (!catalogContainerId ? await db.getContainerByExternalId(lookupKey) : undefined) ??
+          (reservedContainer.externalId && reservedContainer.externalId !== lookupKey
+            ? await db.getContainerByExternalId(reservedContainer.externalId)
+            : undefined) ??
+          (reservedContainer.containerNumber
+            ? await db.getContainerByExternalId(reservedContainer.containerNumber)
+            : undefined);
         if (!container) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Container not found",
-          });
+          const fallbackPhotos = reservedContainer.mainPhoto
+            ? [{
+                id: 0,
+                containerId: reservedContainer.catalogContainerId ?? 0,
+                url: reservedContainer.mainPhoto,
+                displayOrder: 0,
+                isMain: true,
+              }]
+            : [];
+
+          return {
+            id: reservedContainer.catalogContainerId ?? 0,
+            externalId: reservedContainer.externalId ?? reservedContainer.containerNumber ?? input.externalId,
+            bitrixProductId: reservedContainer.bitrixProductId ?? null,
+            name: reservedContainer.containerNumber ?? reservedContainer.name,
+            size: reservedContainer.size ?? reservedContainer.containerType ?? "Не указан",
+            condition: reservedContainer.condition ?? "used",
+            price: reservedContainer.price ?? null,
+            mainPhoto: reservedContainer.mainPhoto ?? null,
+            terminalLocation: reservedContainer.terminal ?? null,
+            serial: Boolean(reservedContainer.serial),
+            description: reservedContainer.description ?? null,
+            photos: fallbackPhotos,
+            reservation: {
+              dealId: reservation.dealId,
+              dealName: reservation.dealName,
+              dealUrl: reservation.dealUrl,
+              contactName: reservation.contactName,
+              contactPhone: reservation.contactPhone,
+              managerName: reservation.managerName,
+              totalQuantity: reservation.totalQuantity,
+              quantity: reservedContainer.quantity,
+              reserveStart: reservedContainer.reserveStart,
+              reserveEnd: reservedContainer.reserveEnd,
+              reserveDays: reservedContainer.reserveDays,
+            },
+          };
         }
 
         const photos = await db.getPhotosByContainerId(container.id);
