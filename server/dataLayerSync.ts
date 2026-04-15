@@ -341,11 +341,30 @@ export async function ensureCatalogContainerHydrated(input: {
   try {
     const existingContainers = await db.getAllContainers(false);
     const identityIndex = buildContainerIdentityIndex(existingContainers);
-    const { items: catalogRows, supportsPhotos } = await fetchCatalogPayloadFromDataLayer();
-    const row = findCatalogRow(catalogRows, {
+    let { items: catalogRows, supportsPhotos } = await fetchCatalogPayloadFromDataLayer();
+    let row = findCatalogRow(catalogRows, {
       bitrixProductId: requestedBitrixProductId,
       externalId: requestedExternalId,
     });
+
+    if (!row) {
+      try {
+        await triggerManualDataLayerSyncIfNeeded("manual");
+        const refreshed = await fetchCatalogPayloadFromDataLayer();
+        catalogRows = refreshed.items;
+        supportsPhotos = refreshed.supportsPhotos;
+        row = findCatalogRow(catalogRows, {
+          bitrixProductId: requestedBitrixProductId,
+          externalId: requestedExternalId,
+        });
+      } catch (error) {
+        console.warn("[catalog-sync] targeted reservation hydration could not trigger upstream sync", {
+          bitrixProductId: requestedBitrixProductId ?? null,
+          externalId: requestedExternalId || null,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
 
     if (!row) {
       if (requestedBitrixProductId) {
