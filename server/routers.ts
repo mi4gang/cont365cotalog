@@ -10,6 +10,7 @@ import { normalizeContainerDisplayName } from "../shared/containerNaming";
 import { downloadAndSaveImage } from "./localStorage";
 import * as cheerio from "cheerio";
 import {
+  ensureCatalogContainerHydrated,
   getCatalogSyncMode,
   getCatalogSyncStatus,
   runCatalogSync,
@@ -302,12 +303,22 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
         ? Number(item.bitrixProductId)
         : null;
       const quantity = normalizePositiveInteger(item.quantity);
-      const catalogContainer = bitrixProductId
+      let catalogContainer = bitrixProductId
         ? (
             catalogByBitrixId.get(bitrixProductId) ??
             (item.containerNumber ? await db.getContainerByExternalId(item.containerNumber) : undefined)
           )
         : (item.containerNumber ? await db.getContainerByExternalId(item.containerNumber) : undefined);
+      if (!catalogContainer && (bitrixProductId || item.containerNumber)) {
+        catalogContainer = await ensureCatalogContainerHydrated({
+          bitrixProductId,
+          externalId: item.containerNumber ?? null,
+        }) ?? undefined;
+
+        if (catalogContainer?.bitrixProductId && !catalogByBitrixId.has(catalogContainer.bitrixProductId)) {
+          catalogByBitrixId.set(catalogContainer.bitrixProductId, catalogContainer);
+        }
+      }
       const mainPhoto = catalogContainer
         ? await db.getMainPhotoByContainerId(catalogContainer.id)
         : undefined;
@@ -1054,7 +1065,15 @@ export const appRouter = router({
           (reservedContainer.containerNumber
             ? await db.getContainerByExternalId(reservedContainer.containerNumber)
             : undefined);
-        if (!container) {
+        const hydratedContainer = container ?? await ensureCatalogContainerHydrated({
+          bitrixProductId: reservedContainer.bitrixProductId,
+          externalId:
+            reservedContainer.externalId ??
+            reservedContainer.containerNumber ??
+            (catalogContainerId ? null : lookupKey),
+        });
+
+        if (!hydratedContainer) {
           const fallbackPhotos = reservedContainer.mainPhoto
             ? [{
                 id: 0,
@@ -1094,12 +1113,12 @@ export const appRouter = router({
           };
         }
 
-        const photos = await db.getPhotosByContainerId(container.id);
-        const resolvedPhotos = photos.length > 0 ? photos : buildFallbackPhotos(reservedContainer.photos, container.id);
+        const photos = await db.getPhotosByContainerId(hydratedContainer.id);
+        const resolvedPhotos = photos.length > 0 ? photos : buildFallbackPhotos(reservedContainer.photos, hydratedContainer.id);
 
         return {
-          ...container,
-          name: normalizeContainerDisplayName(container.name, container.size, container.serial),
+          ...hydratedContainer,
+          name: normalizeContainerDisplayName(hydratedContainer.name, hydratedContainer.size, hydratedContainer.serial),
           photos: resolvedPhotos,
           reservation: {
             dealId: reservation.dealId,

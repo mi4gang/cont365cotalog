@@ -2,6 +2,7 @@ import axios from "axios";
 import * as db from "./db";
 import { getCatalogWriteLockStatus, tryAcquireCatalogWriteLock } from "./catalogWriteLock";
 import { normalizeContainerDisplayName } from "../shared/containerNaming";
+import type { Container } from "../drizzle/schema";
 import {
   buildContainerIdentityIndex,
   registerContainerIdentity,
@@ -295,6 +296,124 @@ async function syncContainerPhotos(containerId: number, photoUrls: string[]): Pr
   }
 
   await replaceContainerPhotos(containerId, photoUrls);
+}
+
+function findCatalogRow(
+  rows: DataLayerCatalogItem[],
+  input: { bitrixProductId?: number | null; externalId?: string | null },
+): DataLayerCatalogItem | null {
+  const bitrixProductId = normalizeBitrixProductId(input.bitrixProductId);
+  const externalId = normalizeExternalId(input.externalId);
+
+  if (bitrixProductId) {
+    const byBitrixId = rows.find((row) => normalizeBitrixProductId(row.bitrixProductId) === bitrixProductId);
+    if (byBitrixId) {
+      return byBitrixId;
+    }
+  }
+
+  if (externalId) {
+    const byExternalId = rows.find((row) => normalizeExternalId(row.containerNumber) === externalId);
+    if (byExternalId) {
+      return byExternalId;
+    }
+  }
+
+  return null;
+}
+
+export async function ensureCatalogContainerHydrated(input: {
+  bitrixProductId?: number | null;
+  externalId?: string | null;
+}): Promise<Container | null> {
+  const requestedBitrixProductId = normalizeBitrixProductId(input.bitrixProductId);
+  const requestedExternalId = normalizeExternalId(input.externalId);
+
+  if (!requestedBitrixProductId && !requestedExternalId) {
+    return null;
+  }
+
+  const releaseLock = tryAcquireCatalogWriteLock("reservation-targeted-hydrate");
+  if (!releaseLock) {
+    return null;
+  }
+
+  try {
+    const existingContainers = await db.getAllContainers(false);
+    const identityIndex = buildContainerIdentityIndex(existingContainers);
+    const { items: catalogRows, supportsPhotos } = await fetchCatalogPayloadFromDataLayer();
+    const row = findCatalogRow(catalogRows, {
+      bitrixProductId: requestedBitrixProductId,
+      externalId: requestedExternalId,
+    });
+
+    if (!row) {
+      if (requestedBitrixProductId) {
+        return (await db.getContainersByBitrixProductIds([requestedBitrixProductId]))[0] ?? null;
+      }
+      if (requestedExternalId) {
+        return (await db.getContainerByExternalId(requestedExternalId)) ?? null;
+      }
+      return null;
+    }
+
+    const externalId = normalizeExternalId(row.containerNumber) || requestedExternalId;
+    const bitrixProductId = normalizeBitrixProductId(row.bitrixProductId) ?? requestedBitrixProductId;
+    const photos = normalizePhotoUrls(row.photos);
+    const serial = toBoolean(row.serial);
+    const normalizedName = normalizeContainerDisplayName(
+      serial ? (row.containerNumber ?? row.name ?? externalId) : (row.name ?? externalId),
+      row.containerType,
+      serial,
+    );
+    const payload = {
+      externalId,
+      bitrixProductId,
+      name: normalizedName || externalId,
+      size: normalizeSize(row.containerType),
+      condition: normalizeCondition(row.condition),
+      price: toNumber(row.price) > 0 ? String(toNumber(row.price)) : undefined,
+      description: serial
+        ? getSerialSalesDescription()
+        : String(row.description ?? "").trim() || undefined,
+      terminalLocation: String(row.terminal ?? "").trim() || undefined,
+      serial,
+      isActive: row.isActive !== false,
+    } as const;
+
+    const { existing } = resolveContainerIdentityMatch(identityIndex, {
+      externalId,
+      bitrixProductId,
+      preferBitrixIdMatching: CATALOG_SYNC_USE_BITRIX_ID_MATCHING,
+    });
+
+    let containerId: number | null = null;
+
+    if (existing) {
+      await db.updateContainer(existing.id, payload);
+      if (supportsPhotos) {
+        await syncContainerPhotos(existing.id, photos);
+      }
+      containerId = existing.id;
+    } else {
+      const created = await db.createContainer(payload);
+      if (!created) {
+        return null;
+      }
+      if (supportsPhotos) {
+        await syncContainerPhotos(created.id, photos);
+      }
+      containerId = created.id;
+    }
+
+    if (!containerId) {
+      return null;
+    }
+
+    return (await db.getContainerById(containerId)) ?? null;
+  } finally {
+    releaseLock();
+  }
 }
 
 async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
