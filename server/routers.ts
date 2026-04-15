@@ -313,6 +313,16 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
         catalogContainer = await ensureCatalogContainerHydrated({
           bitrixProductId,
           externalId: item.containerNumber ?? null,
+          reservationSnapshot: {
+            containerNumber: item.containerNumber ?? null,
+            containerType: item.containerType ?? null,
+            terminal: item.terminal ?? null,
+            recommendedPrice: item.recommendedPrice ?? null,
+            photos: item.photos ?? [],
+            serial: item.serial ?? null,
+            description: null,
+            condition: null,
+          },
         }) ?? undefined;
 
         if (catalogContainer?.bitrixProductId && !catalogByBitrixId.has(catalogContainer.bitrixProductId)) {
@@ -1071,6 +1081,16 @@ export const appRouter = router({
             reservedContainer.externalId ??
             reservedContainer.containerNumber ??
             (catalogContainerId ? null : lookupKey),
+          reservationSnapshot: {
+            containerNumber: reservedContainer.containerNumber ?? null,
+            containerType: reservedContainer.containerType ?? reservedContainer.size ?? null,
+            terminal: reservedContainer.terminal ?? null,
+            recommendedPrice: reservedContainer.price ?? null,
+            photos: reservedContainer.photos ?? [],
+            serial: reservedContainer.serial,
+            description: reservedContainer.description ?? null,
+            condition: reservedContainer.condition ?? null,
+          },
         });
 
         if (!hydratedContainer) {

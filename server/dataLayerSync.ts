@@ -325,9 +325,20 @@ function findCatalogRow(
 export async function ensureCatalogContainerHydrated(input: {
   bitrixProductId?: number | null;
   externalId?: string | null;
+  reservationSnapshot?: {
+    containerNumber?: string | null;
+    containerType?: string | null;
+    terminal?: string | null;
+    recommendedPrice?: string | number | null;
+    photos?: string[] | null;
+    serial?: boolean | null;
+    description?: string | null;
+    condition?: "new" | "used" | null;
+  } | null;
 }): Promise<Container | null> {
   const requestedBitrixProductId = normalizeBitrixProductId(input.bitrixProductId);
   const requestedExternalId = normalizeExternalId(input.externalId);
+  const reservationSnapshot = input.reservationSnapshot ?? null;
 
   if (!requestedBitrixProductId && !requestedExternalId) {
     return null;
@@ -367,13 +378,62 @@ export async function ensureCatalogContainerHydrated(input: {
     }
 
     if (!row) {
-      if (requestedBitrixProductId) {
-        return (await db.getContainersByBitrixProductIds([requestedBitrixProductId]))[0] ?? null;
+      const fallbackExternalId =
+        requestedExternalId ||
+        normalizeExternalId(reservationSnapshot?.containerNumber);
+      const fallbackPhotos = normalizePhotoUrls(reservationSnapshot?.photos);
+      const fallbackSerial = Boolean(reservationSnapshot?.serial);
+
+      if (!fallbackExternalId) {
+        if (requestedBitrixProductId) {
+          return (await db.getContainersByBitrixProductIds([requestedBitrixProductId]))[0] ?? null;
+        }
+        return null;
       }
-      if (requestedExternalId) {
-        return (await db.getContainerByExternalId(requestedExternalId)) ?? null;
+
+      const fallbackPayload = {
+        externalId: fallbackExternalId,
+        bitrixProductId: requestedBitrixProductId,
+        name: normalizeContainerDisplayName(
+          fallbackExternalId,
+          reservationSnapshot?.containerType ?? null,
+          fallbackSerial,
+        ) || fallbackExternalId,
+        size: normalizeSize(reservationSnapshot?.containerType),
+        condition: reservationSnapshot?.condition ?? "used",
+        price: toNumber(reservationSnapshot?.recommendedPrice) > 0
+          ? String(toNumber(reservationSnapshot?.recommendedPrice))
+          : undefined,
+        description: fallbackSerial
+          ? getSerialSalesDescription()
+          : String(reservationSnapshot?.description ?? "").trim() || undefined,
+        terminalLocation: String(reservationSnapshot?.terminal ?? "").trim() || undefined,
+        serial: fallbackSerial,
+        isActive: true,
+      } as const;
+
+      const { existing } = resolveContainerIdentityMatch(identityIndex, {
+        externalId: fallbackExternalId,
+        bitrixProductId: requestedBitrixProductId,
+        preferBitrixIdMatching: CATALOG_SYNC_USE_BITRIX_ID_MATCHING,
+      });
+
+      let containerId: number | null = null;
+
+      if (existing) {
+        await db.updateContainer(existing.id, fallbackPayload);
+        await syncContainerPhotos(existing.id, fallbackPhotos);
+        containerId = existing.id;
+      } else {
+        const created = await db.createContainer(fallbackPayload);
+        if (!created) {
+          return null;
+        }
+        await syncContainerPhotos(created.id, fallbackPhotos);
+        containerId = created.id;
       }
-      return null;
+
+      return containerId ? ((await db.getContainerById(containerId)) ?? null) : null;
     }
 
     const externalId = normalizeExternalId(row.containerNumber) || requestedExternalId;
