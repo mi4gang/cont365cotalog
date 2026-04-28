@@ -62,6 +62,7 @@ export async function initDatabase() {
         \`price\` decimal(12,2),
         \`description\` text,
         \`terminalLocation\` varchar(128),
+        \`serial\` boolean NOT NULL DEFAULT false,
         \`isActive\` boolean NOT NULL DEFAULT true,
         \`createdAt\` timestamp NOT NULL DEFAULT (now()),
         \`updatedAt\` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
@@ -81,6 +82,17 @@ export async function initDatabase() {
         `ALTER TABLE \`${TABLE_NAMES.containers}\` ADD COLUMN \`terminalLocation\` varchar(128) NULL AFTER \`description\``,
       );
       console.log('[Database Init] ✓ containers.terminalLocation column added');
+    }
+
+    const serialColumn = await db.execute(
+      `SHOW COLUMNS FROM \`${TABLE_NAMES.containers}\` LIKE 'serial'`,
+    );
+    const hasSerial = ((serialColumn as any)[0] ?? []).length > 0;
+    if (!hasSerial) {
+      await db.execute(
+        `ALTER TABLE \`${TABLE_NAMES.containers}\` ADD COLUMN \`serial\` boolean NOT NULL DEFAULT false AFTER \`terminalLocation\``,
+      );
+      console.log('[Database Init] ✓ containers.serial column added');
     }
 
     // Create container_photos table

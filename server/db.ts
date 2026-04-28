@@ -204,8 +204,9 @@ export async function deactivateContainersNotIn(externalIds: string[]): Promise<
   const db = await getDb();
   if (!db) return 0;
   if (externalIds.length === 0) {
+    const activeContainers = await db.select().from(containers).where(eq(containers.isActive, true));
     await db.update(containers).set({ isActive: false }).where(eq(containers.isActive, true));
-    return 0;
+    return activeContainers.length;
   }
   const activeContainers = await db.select().from(containers).where(eq(containers.isActive, true));
   const toDeactivate = activeContainers.filter((c: Container) => !externalIds.includes(c.externalId));

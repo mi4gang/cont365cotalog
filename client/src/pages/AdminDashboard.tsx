@@ -597,6 +597,14 @@ export default function AdminDashboard() {
                       <span className="font-medium">Итог последнего синка:</span>{" "}
                       {`total ${dataLayerSyncStatus?.lastTotal ?? 0}, +${dataLayerSyncStatus?.lastAdded ?? 0}, upd ${dataLayerSyncStatus?.lastUpdated ?? 0}, off ${dataLayerSyncStatus?.lastDeactivated ?? 0}`}
                     </div>
+                    <div>
+                      <span className="font-medium">Snapshot Data Layer:</span>{" "}
+                      {formatDateTime(dataLayerSyncStatus?.lastDataLayerGeneratedAt)}
+                    </div>
+                    <div>
+                      <span className="font-medium">Sync Data Layer:</span>{" "}
+                      {formatDateTime(dataLayerSyncStatus?.lastDataLayerSyncAt)}
+                    </div>
                   </div>
                   {dataLayerSyncStatus?.lastError && (
                     <p className="text-xs text-red-600">{dataLayerSyncStatus.lastError}</p>

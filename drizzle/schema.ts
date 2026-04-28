@@ -49,6 +49,8 @@ export const containers = mysqlTable(TABLE_NAMES.containers, {
   description: text("description"),
   /** Terminal location (e.g., "Шубино") */
   terminalLocation: varchar("terminalLocation", { length: 128 }),
+  /** Serial/vitrine position: showcase model, not a unique in-stock unit */
+  serial: boolean("serial").default(false).notNull(),
   /** Is container available/visible in catalog */
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

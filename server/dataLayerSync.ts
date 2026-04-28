@@ -12,6 +12,8 @@ interface DataLayerCatalogItem {
   price?: number | string;
   containerType?: string | null;
   condition?: string | null;
+  description?: string | null;
+  serial?: boolean | string | number | null;
   photos?: string[];
   isActive?: boolean;
 }
@@ -19,6 +21,10 @@ interface DataLayerCatalogItem {
 interface DataLayerPayload {
   containers?: DataLayerCatalogItem[];
   generatedAt?: string;
+  sync?: {
+    lastSyncAt?: string | null;
+    isSyncing?: boolean;
+  };
 }
 
 interface DataLayerProcontainerPayload {
@@ -42,6 +48,9 @@ interface CatalogSyncState {
   lastDeactivated: number;
   lastTotal: number;
   nextAutoRunAt: string | null;
+  lastDataLayerEndpoint: string | null;
+  lastDataLayerGeneratedAt: string | null;
+  lastDataLayerSyncAt: string | null;
 }
 
 const state: CatalogSyncState = {
@@ -57,12 +66,22 @@ const state: CatalogSyncState = {
   lastDeactivated: 0,
   lastTotal: 0,
   nextAutoRunAt: null,
+  lastDataLayerEndpoint: null,
+  lastDataLayerGeneratedAt: null,
+  lastDataLayerSyncAt: null,
 };
 
 const AUTO_SYNC_ENABLED = (process.env.CATALOG_AUTO_SYNC_ENABLED ?? "true").toLowerCase() === "true";
 const AUTO_SYNC_INTERVAL_MINUTES = Math.max(1, Number(process.env.CATALOG_AUTO_SYNC_INTERVAL_MINUTES ?? 60));
 const AUTO_SYNC_RUN_ON_START = (process.env.CATALOG_AUTO_SYNC_RUN_ON_START ?? "false").toLowerCase() === "true";
 const DATA_LAYER_API_BASE_URL = (process.env.DATA_LAYER_API_BASE_URL ?? "").trim().replace(/\/+$/, "");
+function envNumber(name: string, fallback: number): number {
+  const parsed = Number(process.env[name]);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+const DATA_LAYER_FETCH_TIMEOUT_MS = Math.max(5_000, envNumber("CATALOG_DATA_LAYER_FETCH_TIMEOUT_MS", 45_000));
+const MIN_SAFE_CATALOG_ROWS = Math.max(1, envNumber("CATALOG_MIN_SAFE_ROWS", 1));
 
 let currentRun: Promise<CatalogSyncResult> | null = null;
 let intervalHandle: NodeJS.Timeout | null = null;
@@ -74,6 +93,9 @@ export interface CatalogSyncResult {
   updated: number;
   deactivated: number;
   total: number;
+  dataLayerEndpoint?: string | null;
+  dataLayerGeneratedAt?: string | null;
+  dataLayerSyncAt?: string | null;
   error?: string;
 }
 
@@ -109,7 +131,41 @@ function normalizePhotoUrls(value: unknown): string[] {
     .filter((url) => /^https?:\/\//i.test(url));
 }
 
-async function fetchCatalogPayloadFromDataLayer(): Promise<{ items: DataLayerCatalogItem[]; supportsPhotos: boolean }> {
+function toBoolean(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  const raw = String(value ?? "").trim().toLowerCase();
+  return raw === "true" || raw === "1" || raw === "y" || raw === "yes";
+}
+
+function dedupeCatalogRows(items: DataLayerCatalogItem[]): DataLayerCatalogItem[] {
+  const byExternalId = new Map<string, DataLayerCatalogItem>();
+  for (const item of items) {
+    const externalId = normalizeExternalId(item.containerNumber);
+    if (!externalId) continue;
+    byExternalId.set(externalId, item);
+  }
+  return Array.from(byExternalId.values());
+}
+
+function isMissingCatalogEndpoint(error: unknown): boolean {
+  return axios.isAxiosError(error) && (error.response?.status === 404 || error.response?.status === 405);
+}
+
+function formatDataLayerError(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status ? `HTTP ${error.response.status}` : error.code;
+    return [status, error.message].filter(Boolean).join(": ");
+  }
+  return error instanceof Error ? error.message : "Unknown Data Layer error";
+}
+
+async function fetchCatalogPayloadFromDataLayer(): Promise<{
+  items: DataLayerCatalogItem[];
+  endpoint: string;
+  generatedAt: string | null;
+  upstreamSyncAt: string | null;
+}> {
   if (!DATA_LAYER_API_BASE_URL) {
     throw new Error("DATA_LAYER_API_BASE_URL is not configured");
   }
@@ -117,19 +173,21 @@ async function fetchCatalogPayloadFromDataLayer(): Promise<{ items: DataLayerCat
   const preferredUrl = `${DATA_LAYER_API_BASE_URL}/api/catalog/containers`;
   try {
     const response = await axios.get<DataLayerPayload>(preferredUrl, {
-      timeout: 30_000,
+      timeout: DATA_LAYER_FETCH_TIMEOUT_MS,
       validateStatus: (status) => status >= 200 && status < 300,
     });
     const items = Array.isArray(response.data?.containers) ? response.data.containers : [];
     return {
-      items: items.filter((item) => normalizeExternalId(item.containerNumber).length > 0),
-      supportsPhotos: true,
+      items: dedupeCatalogRows(items),
+      endpoint: preferredUrl,
+      generatedAt: response.data?.generatedAt ?? null,
+      upstreamSyncAt: response.data?.sync?.lastSyncAt ?? null,
     };
   } catch (error) {
-    if (axios.isAxiosError(error) && (error.response?.status === 404 || error.response?.status === 405)) {
+    if (isMissingCatalogEndpoint(error)) {
       const fallbackUrl = `${DATA_LAYER_API_BASE_URL}/api/dashboard/procontainer`;
       const fallbackResponse = await axios.get<DataLayerProcontainerPayload>(fallbackUrl, {
-        timeout: 30_000,
+        timeout: DATA_LAYER_FETCH_TIMEOUT_MS,
         validateStatus: (status) => status >= 200 && status < 300,
       });
       const fallbackItems = (Array.isArray(fallbackResponse.data?.stock) ? fallbackResponse.data.stock : [])
@@ -139,14 +197,17 @@ async function fetchCatalogPayloadFromDataLayer(): Promise<{ items: DataLayerCat
           terminal: row.terminal,
           price: row.recommendedPrice,
           photos: undefined,
+          serial: false,
           isActive: true,
         }));
       return {
-        items: fallbackItems.filter((item) => normalizeExternalId(item.containerNumber).length > 0),
-        supportsPhotos: false,
+        items: dedupeCatalogRows(fallbackItems),
+        endpoint: fallbackUrl,
+        generatedAt: null,
+        upstreamSyncAt: null,
       };
     }
-    throw error;
+    throw new Error(`Data Layer catalog snapshot unavailable: ${formatDataLayerError(error)}`);
   }
 }
 
@@ -196,8 +257,19 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
   let total = 0;
 
   try {
-    const { items: catalogRows, supportsPhotos } = await fetchCatalogPayloadFromDataLayer();
+    const {
+      items: catalogRows,
+      endpoint: dataLayerEndpoint,
+      generatedAt: dataLayerGeneratedAt,
+      upstreamSyncAt,
+    } = await fetchCatalogPayloadFromDataLayer();
     total = catalogRows.length;
+
+    if (total < MIN_SAFE_CATALOG_ROWS) {
+      throw new Error(
+        `Data Layer catalog snapshot is suspiciously small (${total} rows); catalog was not changed`,
+      );
+    }
 
     const processedExternalIds: string[] = [];
 
@@ -207,14 +279,16 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
 
       processedExternalIds.push(externalId);
       const photos = normalizePhotoUrls(row.photos);
+      const hasPhotoPayload = Array.isArray(row.photos);
       const payload = {
         externalId,
         name: String(row.name ?? externalId).trim() || externalId,
         size: normalizeSize(row.containerType),
         condition: normalizeCondition(row.condition),
         price: toNumber(row.price) > 0 ? String(toNumber(row.price)) : undefined,
-        description: undefined,
+        description: String(row.description ?? "").trim() || undefined,
         terminalLocation: String(row.terminal ?? "").trim() || undefined,
+        serial: toBoolean(row.serial),
         isActive: row.isActive !== false,
       } as const;
 
@@ -222,14 +296,14 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
       if (existing) {
         // AUTO policy: overwrite all sync fields.
         await db.updateContainer(existing.id, payload);
-        if (supportsPhotos) {
+        if (hasPhotoPayload) {
           await replaceContainerPhotos(existing.id, photos);
         }
         updated += 1;
       } else {
         const created = await db.createContainer(payload);
         if (created) {
-          if (supportsPhotos) {
+          if (hasPhotoPayload) {
             await replaceContainerPhotos(created.id, photos);
           }
         }
@@ -245,6 +319,9 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
     state.lastUpdated = updated;
     state.lastDeactivated = deactivated;
     state.lastTotal = total;
+    state.lastDataLayerEndpoint = dataLayerEndpoint;
+    state.lastDataLayerGeneratedAt = dataLayerGeneratedAt;
+    state.lastDataLayerSyncAt = upstreamSyncAt;
 
     return {
       ok: true,
@@ -253,6 +330,9 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
       updated,
       deactivated,
       total,
+      dataLayerEndpoint,
+      dataLayerGeneratedAt,
+      dataLayerSyncAt: upstreamSyncAt,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown sync error";
