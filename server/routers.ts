@@ -33,6 +33,9 @@ interface DataLayerReservedDealContainer {
   terminal?: string;
   cost?: number;
   recommendedPrice?: number;
+  basePrice?: number | null;
+  discountAmount?: number | null;
+  discountRate?: number | null;
   prelimMargin?: number;
   reserveStart?: string | null;
   reserveEnd?: string | null;
@@ -67,6 +70,9 @@ interface ReservedDealContainerView {
   serial: boolean;
   quantity: number;
   price: string | null;
+  basePrice: string | null;
+  discountAmount: string | null;
+  discountRate: number | null;
   reserveStart: string | null;
   reserveEnd: string | null;
   reserveDays: number | null;
@@ -262,6 +268,7 @@ async function loadReservedDealPayload(
   dealId: number,
   options?: {
     requireExternalId?: string;
+    forceRefresh?: boolean;
   },
 ): Promise<DataLayerReservedDealPayload> {
   const cachedPayload = await fetchReservedDealById(dealId);
@@ -271,7 +278,7 @@ async function loadReservedDealPayload(
     ? payloadContainsExternalId(cachedPayload, requiredExternalId)
     : true;
 
-  if (cachedPayload.active && hasRequiredContainer && isReservationPayloadFresh(cachedPayload)) {
+  if (!options?.forceRefresh && cachedPayload.active && hasRequiredContainer && isReservationPayloadFresh(cachedPayload)) {
     return cachedPayload;
   }
 
@@ -354,7 +361,10 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
         terminal: item.terminal ?? catalogContainer?.terminalLocation ?? "Не указан",
         serial,
         quantity,
-        price: catalogContainer?.price ?? (item.recommendedPrice != null ? String(item.recommendedPrice) : null),
+        price: item.recommendedPrice != null ? String(item.recommendedPrice) : (catalogContainer?.price ?? null),
+        basePrice: item.basePrice != null ? String(item.basePrice) : null,
+        discountAmount: item.discountAmount != null ? String(item.discountAmount) : null,
+        discountRate: item.discountRate != null ? Number(item.discountRate) : null,
         reserveStart: item.reserveStart ?? null,
         reserveEnd: item.reserveEnd ?? null,
         reserveDays: item.reserveDays ?? null,
@@ -1031,7 +1041,7 @@ export const appRouter = router({
     getByDealId: publicProcedure
       .input(z.object({ dealId: z.number().int().positive() }))
       .query(async ({ input }) => {
-        const payload = await loadReservedDealPayload(input.dealId);
+        const payload = await loadReservedDealPayload(input.dealId, { forceRefresh: true });
         return buildReservedDealView(payload);
       }),
 
@@ -1042,7 +1052,7 @@ export const appRouter = router({
         const catalogContainerId = parseReservedCatalogContainerKey(lookupKey);
         const payload = await loadReservedDealPayload(
           input.dealId,
-          catalogContainerId ? undefined : { requireExternalId: lookupKey },
+          catalogContainerId ? { forceRefresh: true } : { requireExternalId: lookupKey, forceRefresh: true },
         );
         const reservation = await buildReservedDealView(payload);
         const reservedContainer = reservation.containers.find(
@@ -1112,6 +1122,9 @@ export const appRouter = router({
             size: reservedContainer.size ?? reservedContainer.containerType ?? "Не указан",
             condition: reservedContainer.condition ?? "used",
             price: reservedContainer.price ?? null,
+            basePrice: reservedContainer.basePrice ?? null,
+            discountAmount: reservedContainer.discountAmount ?? null,
+            discountRate: reservedContainer.discountRate ?? null,
             mainPhoto: reservedContainer.mainPhoto ?? null,
             terminalLocation: reservedContainer.terminal ?? null,
             serial: Boolean(reservedContainer.serial),
@@ -1139,6 +1152,10 @@ export const appRouter = router({
         return {
           ...hydratedContainer,
           name: normalizeContainerDisplayName(hydratedContainer.name, hydratedContainer.size, hydratedContainer.serial),
+          price: reservedContainer.price ?? hydratedContainer.price,
+          basePrice: reservedContainer.basePrice ?? null,
+          discountAmount: reservedContainer.discountAmount ?? null,
+          discountRate: reservedContainer.discountRate ?? null,
           photos: resolvedPhotos,
           reservation: {
             dealId: reservation.dealId,
