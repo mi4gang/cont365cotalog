@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAdminAuth, useAdminLogout } from "@/hooks/useAdminAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -107,6 +107,7 @@ export default function AdminDashboard() {
       refetchOnWindowFocus: true,
     });
   const { data: syncModeData, refetch: refetchSyncMode } = trpc.adminContainers.getSyncMode.useQuery();
+  const previousSyncRunningRef = useRef(false);
 
   const importMutation = trpc.adminContainers.importCsv.useMutation({
     onSuccess: (result) => {
@@ -122,10 +123,13 @@ export default function AdminDashboard() {
 
   const dataLayerSyncMutation = trpc.adminContainers.syncFromDataLayer.useMutation({
     onSuccess: (result) => {
-      toast.success(
-        `Data Layer sync: total ${result.total}, +${result.added}, обновлено ${result.updated}, деактивировано ${result.deactivated}`,
-      );
-      refetchContainers();
+      if (result.alreadyRunning) {
+        toast.info("Синхронизация уже выполняется, обновляю статус");
+      } else if (result.started) {
+        toast.success("Синхронизация запущена, обновляю статус в фоне");
+      } else {
+        toast.success("Синхронизация поставлена на обновление статуса");
+      }
       refetchDataLayerSyncStatus();
     },
     onError: (err) => {
@@ -317,6 +321,17 @@ export default function AdminDashboard() {
     if (dataLayerSyncStatus?.lastSuccess === false) return "text-red-600";
     return "text-slate-600";
   }, [dataLayerSyncStatus?.isRunning, dataLayerSyncStatus?.lastSuccess]);
+
+  useEffect(() => {
+    const wasRunning = previousSyncRunningRef.current;
+    const isRunning = Boolean(dataLayerSyncStatus?.isRunning);
+
+    if (wasRunning && !isRunning && dataLayerSyncStatus?.lastSuccess === true) {
+      refetchContainers();
+    }
+
+    previousSyncRunningRef.current = isRunning;
+  }, [dataLayerSyncStatus?.isRunning, dataLayerSyncStatus?.lastSuccess, refetchContainers]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

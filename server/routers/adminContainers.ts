@@ -11,7 +11,7 @@ import {
 import {
   getCatalogSyncMode,
   getCatalogSyncStatus,
-  runCatalogSync,
+  startCatalogSync,
   setCatalogSyncMode,
 } from "../dataLayerSync";
 import * as db from "../db";
@@ -291,14 +291,11 @@ export const adminContainersRouter = router({
 
   // Manual Data Layer -> Catalog sync trigger
   syncFromDataLayer: adminProcedure.mutation(async () => {
-    const result = await runCatalogSync("manual");
-    if (!result.ok) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: result.error || "Data Layer sync failed",
-      });
-    }
-    return result;
+    const result = startCatalogSync("manual");
+    return {
+      ...result,
+      status: await getCatalogSyncStatus(),
+    };
   }),
 
   // Get all containers (including inactive)
