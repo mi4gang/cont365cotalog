@@ -291,7 +291,10 @@ export const adminContainersRouter = router({
 
   // Manual Data Layer -> Catalog sync trigger
   syncFromDataLayer: adminProcedure.mutation(async () => {
-    return startCatalogSync("manual");
+    console.log("[catalog-sync] syncFromDataLayer handler start");
+    const result = startCatalogSync("manual");
+    console.log("[catalog-sync] syncFromDataLayer handler return", result);
+    return result;
   }),
 
   // Get all containers (including inactive)
