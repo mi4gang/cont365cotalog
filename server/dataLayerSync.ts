@@ -96,6 +96,9 @@ const DATA_LAYER_MANUAL_SYNC_POLL_MS = Math.max(
   1_000,
   Number(process.env.DATA_LAYER_MANUAL_SYNC_POLL_MS ?? 2_000),
 );
+const DATA_LAYER_MANUAL_SYNC_SCOPE = normalizeDataLayerManualSyncScope(
+  process.env.DATA_LAYER_MANUAL_SYNC_SCOPE,
+);
 
 let currentRun: Promise<CatalogSyncResult> | null = null;
 let intervalHandle: NodeJS.Timeout | null = null;
@@ -108,6 +111,19 @@ export interface CatalogSyncResult {
   deactivated: number;
   total: number;
   error?: string;
+}
+
+export interface CatalogSyncStartResult extends CatalogSyncResult {
+  started: boolean;
+  alreadyRunning: boolean;
+}
+
+export function normalizeDataLayerManualSyncScope(value: unknown): "catalog" | "fast" | "full" {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (raw === "fast" || raw === "full" || raw === "catalog") {
+    return raw;
+  }
+  return "catalog";
 }
 
 function toNumber(value: unknown): number {
@@ -192,7 +208,7 @@ async function triggerManualDataLayerSyncIfNeeded(source: SyncSource): Promise<v
 
   const statusBefore = await fetchDataLayerSyncStatus();
   const previousManualStartedAt = statusBefore.manual?.lastStartedAt ?? null;
-  const runUrl = `${DATA_LAYER_API_BASE_URL}/api/sync/run?scope=full&source=manual`;
+  const runUrl = `${DATA_LAYER_API_BASE_URL}/api/sync/run?scope=${DATA_LAYER_MANUAL_SYNC_SCOPE}&source=manual`;
 
   const runResponse = await axios.post(runUrl, undefined, {
     timeout: 30_000,
@@ -669,6 +685,42 @@ export async function runCatalogSync(source: SyncSource = "manual"): Promise<Cat
     currentRun = null;
   });
   return currentRun;
+}
+
+export function startCatalogSync(source: SyncSource = "manual"): CatalogSyncStartResult {
+  if (currentRun) {
+    return {
+      ok: true,
+      source,
+      added: state.lastAdded,
+      updated: state.lastUpdated,
+      deactivated: state.lastDeactivated,
+      total: state.lastTotal,
+      started: false,
+      alreadyRunning: true,
+    };
+  }
+
+  currentRun = runSyncInternal(source).finally(() => {
+    currentRun = null;
+  });
+
+  void currentRun.then((result) => {
+    if (!result.ok) {
+      console.error('[catalog-sync] ' + source + ' failed:', result.error);
+    }
+  });
+
+  return {
+    ok: true,
+    source,
+    added: 0,
+    updated: 0,
+    deactivated: 0,
+    total: 0,
+    started: true,
+    alreadyRunning: false,
+  };
 }
 
 async function canRunAutoSyncNow(): Promise<boolean> {
