@@ -16,6 +16,7 @@ interface DataLayerReservedDealContainer {
   bitrixProductId?: number | null;
   containerNumber?: string;
   containerType?: string | null;
+  condition?: string | null;
   serial?: boolean | null;
   quantity?: number | null;
   terminal?: string;
@@ -63,7 +64,6 @@ interface ReservedDealContainerView {
   description: string | null;
 }
 
-const RESERVATION_REFRESH_MAX_AGE_MS = 90_000;
 const RESERVED_CATALOG_CONTAINER_KEY_PREFIX = "catalog-";
 
 function parseReservedCatalogContainerKey(value: string): number | null {
@@ -116,21 +116,6 @@ function buildFallbackPhotos(
   }));
 }
 
-function parseGeneratedAt(value?: string | null): number | null {
-  if (!value) return null;
-  const timestamp = Date.parse(value);
-  if (Number.isNaN(timestamp)) return null;
-  return timestamp;
-}
-
-function isReservationPayloadFresh(
-  payload: DataLayerReservedDealPayload
-): boolean {
-  const generatedAt = parseGeneratedAt(payload.generatedAt);
-  if (generatedAt == null) return false;
-  return Date.now() - generatedAt <= RESERVATION_REFRESH_MAX_AGE_MS;
-}
-
 function payloadContainsExternalId(
   payload: DataLayerReservedDealPayload,
   externalId: string
@@ -152,6 +137,18 @@ function normalizePositiveInteger(value: unknown): number {
   return normalized;
 }
 
+function normalizeReservedCondition(
+  value: unknown
+): "new" | "used" | null {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (!raw) return null;
+  if (raw === "new" || raw.includes("нов")) return "new";
+  if (raw === "used" || raw.includes("б/у") || raw.includes("бу")) {
+    return "used";
+  }
+  return "used";
+}
+
 async function loadSerialReservationFallback(
   dealId: number
 ): Promise<DataLayerReservedDealContainer[]> {
@@ -162,6 +159,7 @@ async function loadSerialReservationFallback(
         dp.product_id AS bitrixProductId,
         COALESCE(NULLIF(TRIM(p.name), ''), NULLIF(TRIM(dp.product_name), ''), CONCAT('ID ', COALESCE(dp.product_id, dp.id))) AS containerNumber,
         NULLIF(TRIM(p.container_type), '') AS containerType,
+        NULLIF(TRIM(p.condition), '') AS condition,
         COALESCE(dp.quantity, 0) AS quantity,
         COALESCE(dp.reserve_quantity, 0) AS reserveQuantity,
         COALESCE(NULLIF(TRIM(s.title), ''), 'Не указан') AS terminal,
@@ -199,6 +197,7 @@ async function loadSerialReservationFallback(
         : null,
     containerNumber: row.containerNumber ?? undefined,
     containerType: row.containerType ?? null,
+    condition: row.condition ?? null,
     serial: true,
     quantity: normalizePositiveInteger(row.reserveQuantity ?? row.quantity),
     terminal: row.terminal ?? "Не указан",
@@ -282,11 +281,7 @@ async function loadReservedDealPayload(
     ? payloadContainsExternalId(cachedPayload, requiredExternalId)
     : true;
 
-  if (
-    cachedPayload.active &&
-    hasRequiredContainer &&
-    isReservationPayloadFresh(cachedPayload)
-  ) {
+  if (cachedPayload.active && hasRequiredContainer) {
     return cachedPayload;
   }
 
@@ -366,7 +361,9 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
           `Контейнер ${item.id}`,
         size,
         containerType: item.containerType ?? catalogContainer?.size ?? null,
-        condition: catalogContainer?.condition ?? null,
+        condition:
+          catalogContainer?.condition ??
+          normalizeReservedCondition(item.condition),
         terminal:
           item.terminal ?? catalogContainer?.terminalLocation ?? "Не указан",
         serial,
