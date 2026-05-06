@@ -470,6 +470,7 @@ export const reservationsRouter = router({
           container.size,
           container.serial
         ),
+        condition: reservedContainer.condition ?? container.condition,
         photos: resolvedPhotos,
         reservation: {
           dealId: reservation.dealId,
