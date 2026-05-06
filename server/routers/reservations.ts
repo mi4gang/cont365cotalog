@@ -362,8 +362,9 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
         size,
         containerType: item.containerType ?? catalogContainer?.size ?? null,
         condition:
+          normalizeReservedCondition(item.condition) ??
           catalogContainer?.condition ??
-          normalizeReservedCondition(item.condition),
+          null,
         terminal:
           item.terminal ?? catalogContainer?.terminalLocation ?? "Не указан",
         serial,
