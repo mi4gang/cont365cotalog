@@ -7,6 +7,18 @@ import { Search, Loader2, ChevronDown } from "lucide-react";
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
 
+const CATALOG_RETURN_SNAPSHOT_KEY = "catalog_return_snapshot_v1";
+const CATALOG_RETURN_RESTORE_KEY = "catalog_return_restore_once_v1";
+
+interface CatalogReturnSnapshot {
+  sizeFilters: string[];
+  conditionFilter: string;
+  terminalFilters: string[];
+  searchQuery: string;
+  priceFrom: string;
+  priceTo: string;
+}
+
 export default function Catalog() {
   // State for filters (using actual string values for logic)
   const [sizeFilters, setSizeFilters] = useState<string[]>([]);
@@ -35,6 +47,7 @@ export default function Catalog() {
   const terminalDropdownRef = useRef<HTMLDivElement>(null);
   const priceDropdownRef = useRef<HTMLDivElement>(null);
   const priceMobileAccordionRef = useRef<HTMLDivElement>(null);
+  const skipNextUrlSyncRef = useRef(false);
 
   // Fetch unique values from DB to build the ID mapping
   const { data: availableSizes } = trpc.containers.getSizes.useQuery();
@@ -94,40 +107,71 @@ export default function Catalog() {
     if (isInitialized) return;
 
     const params = new URLSearchParams(window.location.search);
+    const hasExplicitFilters = params.toString().length > 0;
+    const shouldRestoreOnce = sessionStorage.getItem(CATALOG_RETURN_RESTORE_KEY) === "1";
+    const savedSnapshotRaw = sessionStorage.getItem(CATALOG_RETURN_SNAPSHOT_KEY);
 
-    const initialSizes = (params.get("s")?.split(",").filter(Boolean) || [])
-      .map(id => mappings.idToSize[id])
-      .filter((size): size is string => !!size);
+    if (hasExplicitFilters) {
+      const initialSizes = (params.get("s")?.split(",").filter(Boolean) || [])
+        .map(id => mappings.idToSize[id])
+        .filter((size): size is string => !!size);
 
-    const initialTerminals = (params.get("t")?.split(",").filter(Boolean) || [])
-      .map(id => mappings.idToTerminal[id])
-      .filter((terminal): terminal is string => !!terminal);
+      const initialTerminals = (params.get("t")?.split(",").filter(Boolean) || [])
+        .map(id => mappings.idToTerminal[id])
+        .filter((terminal): terminal is string => !!terminal);
 
-    const initialCondition = params.get("c");
-    const initialPriceFrom = params.get("pf");
-    const initialPriceTo = params.get("pt");
-    const initialSearch = params.get("q");
+      const initialCondition = params.get("c");
+      const initialPriceFrom = params.get("pf");
+      const initialPriceTo = params.get("pt");
+      const initialSearch = params.get("q");
 
-    if (initialSizes.length > 0) setSizeFilters(initialSizes);
-    if (initialTerminals.length > 0) setTerminalFilters(initialTerminals);
-    if (initialCondition) setConditionFilter(initialCondition);
-    if (initialPriceFrom) {
-      setPriceFrom(initialPriceFrom);
-      const value = parseFloat(initialPriceFrom);
-      if (!isNaN(value)) setSliderValues(prev => [value, prev[1]]);
+      if (initialSizes.length > 0) setSizeFilters(initialSizes);
+      if (initialTerminals.length > 0) setTerminalFilters(initialTerminals);
+      if (initialCondition) setConditionFilter(initialCondition);
+      if (initialPriceFrom) {
+        setPriceFrom(initialPriceFrom);
+        const value = parseFloat(initialPriceFrom);
+        if (!isNaN(value)) setSliderValues(prev => [value, prev[1]]);
+      }
+      if (initialPriceTo) {
+        setPriceTo(initialPriceTo);
+        const value = parseFloat(initialPriceTo);
+        if (!isNaN(value)) setSliderValues(prev => [prev[0], value]);
+      }
+      if (initialSearch) setSearchQuery(initialSearch);
+    } else if (shouldRestoreOnce && savedSnapshotRaw) {
+      try {
+        const snapshot = JSON.parse(savedSnapshotRaw) as CatalogReturnSnapshot;
+        setSizeFilters(Array.isArray(snapshot.sizeFilters) ? snapshot.sizeFilters : []);
+        setConditionFilter(snapshot.conditionFilter || "all");
+        setTerminalFilters(Array.isArray(snapshot.terminalFilters) ? snapshot.terminalFilters : []);
+        setSearchQuery(snapshot.searchQuery || "");
+        setPriceFrom(snapshot.priceFrom || "");
+        setPriceTo(snapshot.priceTo || "");
+
+        const restoredFrom = parseFloat(snapshot.priceFrom || "");
+        const restoredTo = parseFloat(snapshot.priceTo || "");
+        setSliderValues([
+          Number.isNaN(restoredFrom) ? 0 : restoredFrom,
+          Number.isNaN(restoredTo) ? 1000000 : restoredTo,
+        ]);
+        skipNextUrlSyncRef.current = true;
+      } catch {
+        sessionStorage.removeItem(CATALOG_RETURN_SNAPSHOT_KEY);
+      } finally {
+        sessionStorage.removeItem(CATALOG_RETURN_RESTORE_KEY);
+      }
     }
-    if (initialPriceTo) {
-      setPriceTo(initialPriceTo);
-      const value = parseFloat(initialPriceTo);
-      if (!isNaN(value)) setSliderValues(prev => [prev[0], value]);
-    }
-    if (initialSearch) setSearchQuery(initialSearch);
 
     setIsInitialized(true);
   }, [availableSizes, availableTerminals, mappings, isInitialized]);
 
   useEffect(() => {
     if (!isInitialized) return;
+    if (skipNextUrlSyncRef.current) {
+      skipNextUrlSyncRef.current = false;
+      return;
+    }
 
     const params = new URLSearchParams();
 
@@ -219,6 +263,18 @@ export default function Catalog() {
     setPriceFrom("");
     setPriceTo("");
     setSliderValues([priceRange.min, priceRange.max]);
+  };
+
+  const rememberCatalogStateForReturn = () => {
+    const snapshot: CatalogReturnSnapshot = {
+      sizeFilters,
+      conditionFilter,
+      terminalFilters,
+      searchQuery,
+      priceFrom,
+      priceTo,
+    };
+    sessionStorage.setItem(CATALOG_RETURN_SNAPSHOT_KEY, JSON.stringify(snapshot));
   };
 
   // Labels
@@ -368,7 +424,7 @@ export default function Catalog() {
           ) : containers && containers.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
               {containers.map((container) => (
-                <ContainerCard key={container.id} id={container.id} externalId={container.externalId} name={buildContainerTitle(container.name, container.size, container.serial)} size={container.size} condition={container.condition} price={container.price} mainPhoto={container.mainPhoto} terminalLocation={container.terminalLocation} serial={container.serial} />
+                <ContainerCard key={container.id} id={container.id} externalId={container.externalId} name={buildContainerTitle(container.name, container.size, container.serial)} size={container.size} condition={container.condition} price={container.price} mainPhoto={container.mainPhoto} terminalLocation={container.terminalLocation} serial={container.serial} onClick={rememberCatalogStateForReturn} />
               ))}
             </div>
           ) : (

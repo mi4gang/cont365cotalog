@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import CatalogHeader from "@/components/CatalogHeader";
 import { buildContainerTitle, normalizeContainerDisplayName } from "@shared/containerNaming";
@@ -47,8 +47,12 @@ function formatReservationDaysLeft(value?: string | null) {
   return `Осталось дней: ${daysLeft}`;
 }
 
+const CATALOG_RETURN_SNAPSHOT_KEY = "catalog_return_snapshot_v1";
+const CATALOG_RETURN_RESTORE_KEY = "catalog_return_restore_once_v1";
+
 export default function ContainerDetail() {
   const params = useParams<{ id?: string; externalId?: string; dealId?: string }>();
+  const [, setLocation] = useLocation();
   const containerId = parseInt(params.id || "0", 10);
   const reservedExternalId = params.externalId || "";
   const dealId = params.dealId ? parseInt(params.dealId, 10) : null;
@@ -147,6 +151,13 @@ export default function ContainerDetail() {
     });
   }, [container?.photos]);
 
+  const handleBackToCatalog = () => {
+    if (!isReservedMode && sessionStorage.getItem(CATALOG_RETURN_SNAPSHOT_KEY)) {
+      sessionStorage.setItem(CATALOG_RETURN_RESTORE_KEY, "1");
+    }
+    setLocation(backHref);
+  };
+
   if (isLoading) {
     return (
       <div className="detail-page">
@@ -166,12 +177,10 @@ export default function ContainerDetail() {
           <h1 className="text-2xl font-bold text-white mb-4">
             {isReservedMode ? "Контейнер в этой брони не найден" : "Контейнер не найден"}
           </h1>
-          <Link href={backHref}>
-            <button className="back-button">
-              <ChevronLeft className="w-4 h-4" />
-              {backLabel}
-            </button>
-          </Link>
+          <button className="back-button" onClick={handleBackToCatalog}>
+            <ChevronLeft className="w-4 h-4" />
+            {backLabel}
+          </button>
         </div>
       </div>
     );
@@ -232,8 +241,9 @@ export default function ContainerDetail() {
             border: "1px solid rgba(148, 163, 184, 0.1)",
           }}
         >
-          <Link
-            href={backHref}
+          <button
+            type="button"
+            onClick={handleBackToCatalog}
             className="inline-flex items-center gap-2 mb-4 sm:mb-6 transition-all hover:gap-3 active:scale-95"
             style={{
               color: "oklch(0.869 0.022 252.894)",
@@ -245,7 +255,7 @@ export default function ContainerDetail() {
           >
             <ChevronLeft className="w-5 h-5" />
             <span className="text-base font-medium">{backLabel}</span>
-          </Link>
+          </button>
 
           {isReservedMode && reservation ? (
             <section

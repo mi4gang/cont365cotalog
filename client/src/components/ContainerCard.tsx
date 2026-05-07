@@ -15,6 +15,7 @@ interface ContainerCardProps {
   detailNote?: string | null;
   actionLabel?: string;
   serial?: boolean;
+  onClick?: () => void;
 }
 
 export default function ContainerCard({
@@ -32,6 +33,7 @@ export default function ContainerCard({
   detailNote,
   actionLabel = "Смотреть",
   serial = false,
+  onClick,
 }: ContainerCardProps) {
   const formatPrice = (price: string | null) => {
     if (!price) return "Цена по запросу";
@@ -135,8 +137,8 @@ export default function ContainerCard({
   );
 
   if (href) {
-    return <Link href={href}>{content}</Link>;
+    return <Link href={href} onClick={onClick}>{content}</Link>;
   }
 
-  return <Link href={`/container/${id}`}>{content}</Link>;
+  return <Link href={`/container/${id}`} onClick={onClick}>{content}</Link>;
 }
