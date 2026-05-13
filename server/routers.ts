@@ -996,8 +996,8 @@ export const appRouter = router({
     getPublicById: publicProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
-        const container = await db.getContainerById(input.id);
-        if (!container || !container.isActive) {
+        const container = await db.getPublicContainerById(input.id);
+        if (!container) {
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Container not found",
