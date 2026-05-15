@@ -2,6 +2,7 @@ import axios from "axios";
 import * as db from "./db";
 import { getCatalogWriteLockStatus, tryAcquireCatalogWriteLock } from "./catalogWriteLock";
 import { normalizeContainerDisplayName } from "../shared/containerNaming";
+import type { Container } from "../drizzle/schema";
 import {
   buildContainerIdentityIndex,
   registerContainerIdentity,
@@ -89,7 +90,7 @@ const CATALOG_SYNC_USE_BITRIX_ID_MATCHING =
 const DATA_LAYER_API_BASE_URL = (process.env.DATA_LAYER_API_BASE_URL ?? "").trim().replace(/\/+$/, "");
 const DATA_LAYER_MANUAL_SYNC_TIMEOUT_MS = Math.max(
   10_000,
-  Number(process.env.DATA_LAYER_MANUAL_SYNC_TIMEOUT_MS ?? 180_000),
+  Number(process.env.DATA_LAYER_MANUAL_SYNC_TIMEOUT_MS ?? 600_000),
 );
 const DATA_LAYER_MANUAL_SYNC_POLL_MS = Math.max(
   1_000,
@@ -197,17 +198,17 @@ async function fetchDataLayerSyncStatus(): Promise<DataLayerSyncStatus> {
   return response.data ?? {};
 }
 
-async function triggerManualDataLayerSyncIfNeeded(source: SyncSource): Promise<void> {
-  if (source !== "manual") {
-    return;
-  }
+async function triggerDataLayerSyncIfNeeded(source: SyncSource): Promise<void> {
   if (!DATA_LAYER_API_BASE_URL) {
     throw new Error("DATA_LAYER_API_BASE_URL is not configured");
   }
 
   const statusBefore = await fetchDataLayerSyncStatus();
   const previousManualStartedAt = statusBefore.manual?.lastStartedAt ?? null;
-  const runUrl = `${DATA_LAYER_API_BASE_URL}/api/sync/run?scope=${DATA_LAYER_MANUAL_SYNC_SCOPE}&source=manual`;
+  const upstreamSource = source === "manual" ? "manual" : `catalog-${source}`;
+  const runUrl =
+    `${DATA_LAYER_API_BASE_URL}/api/sync/run?scope=${DATA_LAYER_MANUAL_SYNC_SCOPE}` +
+    `&source=${encodeURIComponent(upstreamSource)}`;
 
   const runResponse = await axios.post(runUrl, undefined, {
     timeout: 30_000,
@@ -224,7 +225,17 @@ async function triggerManualDataLayerSyncIfNeeded(source: SyncSource): Promise<v
   const deadline = Date.now() + DATA_LAYER_MANUAL_SYNC_TIMEOUT_MS;
 
   while (Date.now() < deadline) {
-    const status = await fetchDataLayerSyncStatus();
+    let status: DataLayerSyncStatus;
+    try {
+      status = await fetchDataLayerSyncStatus();
+    } catch (error) {
+      console.warn("[catalog-sync] Data Layer status poll failed; keeping sync pending", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      await sleep(DATA_LAYER_MANUAL_SYNC_POLL_MS);
+      continue;
+    }
+
     if (!status.isSyncing) {
       const manualStartedAt = status.manual?.lastStartedAt ?? null;
       const manualRunStarted = manualStartedAt !== previousManualStartedAt;
@@ -313,6 +324,203 @@ async function syncContainerPhotos(containerId: number, photoUrls: string[]): Pr
   await replaceContainerPhotos(containerId, photoUrls);
 }
 
+function findCatalogRow(
+  rows: DataLayerCatalogItem[],
+  input: { bitrixProductId?: number | null; externalId?: string | null },
+): DataLayerCatalogItem | null {
+  const bitrixProductId = normalizeBitrixProductId(input.bitrixProductId);
+  const externalId = normalizeExternalId(input.externalId);
+
+  if (bitrixProductId) {
+    const byBitrixId = rows.find((row) => normalizeBitrixProductId(row.bitrixProductId) === bitrixProductId);
+    if (byBitrixId) {
+      return byBitrixId;
+    }
+  }
+
+  if (externalId) {
+    const byExternalId = rows.find((row) => normalizeExternalId(row.containerNumber) === externalId);
+    if (byExternalId) {
+      return byExternalId;
+    }
+  }
+
+  return null;
+}
+
+export async function ensureCatalogContainerHydrated(input: {
+  bitrixProductId?: number | null;
+  externalId?: string | null;
+  reservationSnapshot?: {
+    containerNumber?: string | null;
+    containerType?: string | null;
+    terminal?: string | null;
+    recommendedPrice?: string | number | null;
+    photos?: string[] | null;
+    serial?: boolean | null;
+    description?: string | null;
+    condition?: "new" | "used" | null;
+  } | null;
+}): Promise<Container | null> {
+  const requestedBitrixProductId = normalizeBitrixProductId(input.bitrixProductId);
+  const requestedExternalId = normalizeExternalId(input.externalId);
+  const reservationSnapshot = input.reservationSnapshot ?? null;
+
+  if (!requestedBitrixProductId && !requestedExternalId) {
+    return null;
+  }
+
+  const releaseLock = tryAcquireCatalogWriteLock("reservation-targeted-hydrate");
+  if (!releaseLock) {
+    return null;
+  }
+
+  try {
+    const existingContainers = await db.getAllContainers(false);
+    const identityIndex = buildContainerIdentityIndex(existingContainers);
+    let { items: catalogRows, supportsPhotos } = await fetchCatalogPayloadFromDataLayer();
+    let row = findCatalogRow(catalogRows, {
+      bitrixProductId: requestedBitrixProductId,
+      externalId: requestedExternalId,
+    });
+
+    if (!row) {
+      try {
+        await triggerDataLayerSyncIfNeeded("manual");
+        const refreshed = await fetchCatalogPayloadFromDataLayer();
+        catalogRows = refreshed.items;
+        supportsPhotos = refreshed.supportsPhotos;
+        row = findCatalogRow(catalogRows, {
+          bitrixProductId: requestedBitrixProductId,
+          externalId: requestedExternalId,
+        });
+      } catch (error) {
+        console.warn("[catalog-sync] targeted reservation hydration could not trigger upstream sync", {
+          bitrixProductId: requestedBitrixProductId ?? null,
+          externalId: requestedExternalId || null,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    if (!row) {
+      const fallbackExternalId =
+        requestedExternalId ||
+        normalizeExternalId(reservationSnapshot?.containerNumber);
+      const fallbackPhotos = normalizePhotoUrls(reservationSnapshot?.photos);
+      const fallbackSerial = Boolean(reservationSnapshot?.serial);
+
+      if (!fallbackExternalId) {
+        if (requestedBitrixProductId) {
+          return (await db.getContainersByBitrixProductIds([requestedBitrixProductId]))[0] ?? null;
+        }
+        return null;
+      }
+
+      const fallbackPayload = {
+        externalId: fallbackExternalId,
+        bitrixProductId: requestedBitrixProductId,
+        name: normalizeContainerDisplayName(
+          fallbackExternalId,
+          reservationSnapshot?.containerType ?? null,
+          fallbackSerial,
+        ) || fallbackExternalId,
+        size: normalizeSize(reservationSnapshot?.containerType),
+        condition: reservationSnapshot?.condition ?? "used",
+        price: toNumber(reservationSnapshot?.recommendedPrice) > 0
+          ? String(toNumber(reservationSnapshot?.recommendedPrice))
+          : undefined,
+        description: fallbackSerial
+          ? getSerialSalesDescription()
+          : String(reservationSnapshot?.description ?? "").trim() || undefined,
+        terminalLocation: String(reservationSnapshot?.terminal ?? "").trim() || undefined,
+        serial: fallbackSerial,
+        isActive: true,
+      } as const;
+
+      const { existing } = resolveContainerIdentityMatch(identityIndex, {
+        externalId: fallbackExternalId,
+        bitrixProductId: requestedBitrixProductId,
+        preferBitrixIdMatching: CATALOG_SYNC_USE_BITRIX_ID_MATCHING,
+      });
+
+      let containerId: number | null = null;
+
+      if (existing) {
+        await db.updateContainer(existing.id, fallbackPayload);
+        await syncContainerPhotos(existing.id, fallbackPhotos);
+        containerId = existing.id;
+      } else {
+        const created = await db.createContainer(fallbackPayload);
+        if (!created) {
+          return null;
+        }
+        await syncContainerPhotos(created.id, fallbackPhotos);
+        containerId = created.id;
+      }
+
+      return containerId ? ((await db.getContainerById(containerId)) ?? null) : null;
+    }
+
+    const externalId = normalizeExternalId(row.containerNumber) || requestedExternalId;
+    const bitrixProductId = normalizeBitrixProductId(row.bitrixProductId) ?? requestedBitrixProductId;
+    const photos = normalizePhotoUrls(row.photos);
+    const serial = toBoolean(row.serial);
+    const normalizedName = normalizeContainerDisplayName(
+      serial ? (row.containerNumber ?? row.name ?? externalId) : (row.name ?? externalId),
+      row.containerType,
+      serial,
+    );
+    const payload = {
+      externalId,
+      bitrixProductId,
+      name: normalizedName || externalId,
+      size: normalizeSize(row.containerType),
+      condition: normalizeCondition(row.condition),
+      price: toNumber(row.price) > 0 ? String(toNumber(row.price)) : undefined,
+      description: serial
+        ? getSerialSalesDescription()
+        : String(row.description ?? "").trim() || undefined,
+      terminalLocation: String(row.terminal ?? "").trim() || undefined,
+      serial,
+      isActive: row.isActive !== false,
+    } as const;
+
+    const { existing } = resolveContainerIdentityMatch(identityIndex, {
+      externalId,
+      bitrixProductId,
+      preferBitrixIdMatching: CATALOG_SYNC_USE_BITRIX_ID_MATCHING,
+    });
+
+    let containerId: number | null = null;
+
+    if (existing) {
+      await db.updateContainer(existing.id, payload);
+      if (supportsPhotos) {
+        await syncContainerPhotos(existing.id, photos);
+      }
+      containerId = existing.id;
+    } else {
+      const created = await db.createContainer(payload);
+      if (!created) {
+        return null;
+      }
+      if (supportsPhotos) {
+        await syncContainerPhotos(created.id, photos);
+      }
+      containerId = created.id;
+    }
+
+    if (!containerId) {
+      return null;
+    }
+
+    return (await db.getContainerById(containerId)) ?? null;
+  } finally {
+    releaseLock();
+  }
+}
+
 async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
   const releaseLock = tryAcquireCatalogWriteLock("data-layer-sync");
   if (!releaseLock) {
@@ -343,7 +551,7 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
   let total = 0;
 
   try {
-    await triggerManualDataLayerSyncIfNeeded(source);
+    await triggerDataLayerSyncIfNeeded(source);
     const { items: catalogRows, supportsPhotos } = await fetchCatalogPayloadFromDataLayer();
     total = catalogRows.length;
     const identityIndex = buildContainerIdentityIndex(await db.getAllContainers(false));

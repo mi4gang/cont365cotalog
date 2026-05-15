@@ -29,6 +29,34 @@ function formatQuantity(value?: number | null) {
   return `${quantity} шт.`;
 }
 
+function formatMoney(value?: string | number | null) {
+  if (value == null) return null;
+  const amount = typeof value === "number" ? value : Number.parseFloat(value);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  return new Intl.NumberFormat("ru-RU", {
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function buildReservationNote(container: {
+  quantity?: number | null;
+  reserveEnd?: string | null;
+  discountAmount?: string | number | null;
+}) {
+  const parts = [`В брони: ${formatQuantity(container.quantity)}`];
+  const discount = formatMoney(container.discountAmount);
+
+  if (discount) {
+    parts.push(`скидка ${discount} ₽`);
+  }
+
+  if (container.reserveEnd) {
+    parts.push(`до ${formatDate(container.reserveEnd)}`);
+  }
+
+  return parts.join(" · ");
+}
+
 export default function ReservedDealDetail() {
   const params = useParams<{ dealId: string }>();
   const dealId = parseInt(params.dealId || "0", 10);
@@ -190,11 +218,7 @@ export default function ReservedDealDetail() {
                   )}`}
                   badgeText="В брони"
                   badgeTone="reserved"
-                  detailNote={
-                    container.reserveEnd
-                      ? `В брони: ${formatQuantity(container.quantity)} · до ${formatDate(container.reserveEnd)}`
-                      : `В брони: ${formatQuantity(container.quantity)}`
-                  }
+                  detailNote={buildReservationNote(container)}
                   actionLabel="Открыть"
                 />
               ))}

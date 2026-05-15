@@ -27,6 +27,42 @@ import {
 let _db: any = null;
 let _pool: mysql.Pool | null = null;
 
+const PUBLIC_BLOCKED_STAGE_IDS = [
+  "PREPAYMENT_INVOICE",
+  "UC_ZZNB7I",
+  "FINAL_INVOICE",
+];
+
+const publicCatalogVisibilityGuard = () => sql`
+  NOT EXISTS (
+    SELECT 1
+    FROM b_deal_products dp
+    INNER JOIN b_deals d ON d.id = dp.deal_id
+    WHERE dp.product_id = ${containers.bitrixProductId}
+      AND dp.product_id IS NOT NULL
+      AND (
+        (
+          COALESCE(dp.reserve_quantity, 0) > 0
+          AND d.stage_semantic_id = 'P'
+          AND (
+            dp.reserve_end IS NULL
+            OR dp.reserve_end >= CURDATE()
+          )
+        )
+        OR d.stage_semantic_id = 'S'
+        OR (
+          d.stage_semantic_id = 'P'
+          AND (
+            CASE
+              WHEN LOCATE(':', d.stage_id) > 0 THEN SUBSTRING_INDEX(d.stage_id, ':', -1)
+              ELSE d.stage_id
+            END
+          ) IN (${sql.join(PUBLIC_BLOCKED_STAGE_IDS.map((stageId) => sql`${stageId}`), sql`, `)})
+        )
+      )
+  )
+`;
+
 /**
  * Creates or returns the existing MySQL connection pool.
  */
@@ -190,7 +226,7 @@ export async function getAllContainers(
     return db
       .select()
       .from(containers)
-      .where(eq(containers.isActive, true))
+      .where(and(eq(containers.isActive, true), publicCatalogVisibilityGuard()))
       .orderBy(containers.id);
   }
   return db.select().from(containers).orderBy(containers.id);
@@ -205,6 +241,19 @@ export async function getContainerById(
     .select()
     .from(containers)
     .where(eq(containers.id, id))
+    .limit(1);
+  return result[0];
+}
+
+export async function getPublicContainerById(
+  id: number
+): Promise<Container | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(containers)
+    .where(and(eq(containers.id, id), eq(containers.isActive, true), publicCatalogVisibilityGuard()))
     .limit(1);
   return result[0];
 }
