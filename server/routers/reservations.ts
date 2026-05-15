@@ -159,7 +159,7 @@ async function loadSerialReservationFallback(
         dp.product_id AS bitrixProductId,
         COALESCE(NULLIF(TRIM(p.name), ''), NULLIF(TRIM(dp.product_name), ''), CONCAT('ID ', COALESCE(dp.product_id, dp.id))) AS containerNumber,
         NULLIF(TRIM(p.container_type), '') AS containerType,
-        NULLIF(TRIM(p.condition), '') AS condition,
+        NULLIF(TRIM(p.\`condition\`), '') AS condition,
         COALESCE(dp.quantity, 0) AS quantity,
         COALESCE(dp.reserve_quantity, 0) AS reserveQuantity,
         COALESCE(NULLIF(TRIM(s.title), ''), 'Не указан') AS terminal,
