@@ -521,6 +521,19 @@ export async function ensureCatalogContainerHydrated(input: {
   }
 }
 
+async function hasExistingContainerPhotos(containerId: number): Promise<boolean> {
+  const existingPhotos = await db.getPhotosByContainerId(containerId);
+  return existingPhotos.length > 0;
+}
+
+export function shouldPublishCatalogRow(
+  supportsPhotos: boolean,
+  photoUrls: string[],
+  hasExistingPhotos: boolean,
+): boolean {
+  return !supportsPhotos || photoUrls.length > 0 || hasExistingPhotos;
+}
+
 async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
   const releaseLock = tryAcquireCatalogWriteLock("data-layer-sync");
   if (!releaseLock) {
@@ -593,8 +606,16 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
       });
 
       if (existing) {
+        const shouldPublish = shouldPublishCatalogRow(
+          supportsPhotos,
+          photos,
+          await hasExistingContainerPhotos(existing.id),
+        );
         // AUTO policy: overwrite all sync fields.
-        await db.updateContainer(existing.id, payload);
+        await db.updateContainer(existing.id, {
+          ...payload,
+          isActive: payload.isActive && shouldPublish,
+        });
         registerContainerIdentity(identityIndex, {
           ...existing,
           externalId,
@@ -605,7 +626,11 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
         }
         updated += 1;
       } else {
-        const created = await db.createContainer(payload);
+        const shouldPublish = shouldPublishCatalogRow(supportsPhotos, photos, false);
+        const created = await db.createContainer({
+          ...payload,
+          isActive: payload.isActive && shouldPublish,
+        });
         if (created) {
           registerContainerIdentity(identityIndex, created);
           if (supportsPhotos) {
