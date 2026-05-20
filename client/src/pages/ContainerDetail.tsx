@@ -72,7 +72,11 @@ export default function ContainerDetail() {
 
   const reservedContainerQuery = trpc.reservations.getContainerByDealId.useQuery(
     { dealId: dealId ?? 0, externalId: reservedExternalId },
-    { enabled: reservedExternalId.length > 0 && isReservedMode },
+    {
+      enabled: reservedExternalId.length > 0 && isReservedMode,
+      refetchInterval: 30_000,
+      refetchOnWindowFocus: true,
+    },
   );
 
   const publicContainer = publicContainerQuery.data;

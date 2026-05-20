@@ -65,6 +65,9 @@ interface ReservedDealContainerView {
 }
 
 const RESERVED_CATALOG_CONTAINER_KEY_PREFIX = "catalog-";
+const RESERVED_DEAL_REFRESH_THROTTLE_MS = 30_000;
+
+const reservedDealRefreshAttempts = new Map<number, number>();
 
 function parseReservedCatalogContainerKey(value: string): number | null {
   const normalized = String(value || "").trim();
@@ -116,7 +119,7 @@ function buildFallbackPhotos(
   }));
 }
 
-function payloadContainsExternalId(
+export function payloadContainsExternalId(
   payload: DataLayerReservedDealPayload,
   externalId: string
 ): boolean {
@@ -127,6 +130,39 @@ function payloadContainsExternalId(
     const containerNumber = String(item.containerNumber ?? "").trim();
     return containerNumber === externalId;
   });
+}
+
+function canAttemptReservedDealRefresh(dealId: number): boolean {
+  const now = Date.now();
+  const previousAttemptAt = reservedDealRefreshAttempts.get(dealId) ?? 0;
+  if (now - previousAttemptAt < RESERVED_DEAL_REFRESH_THROTTLE_MS) {
+    return false;
+  }
+
+  reservedDealRefreshAttempts.set(dealId, now);
+  return true;
+}
+
+export function shouldRefreshReservedDealPayload(
+  payload: DataLayerReservedDealPayload,
+  options?: {
+    forceRefresh?: boolean;
+    requireExternalId?: string;
+  }
+): boolean {
+  const requiredExternalId = String(options?.requireExternalId ?? "").trim();
+
+  if (options?.forceRefresh) {
+    return true;
+  }
+
+  if (!payload.active) {
+    return true;
+  }
+
+  return Boolean(
+    requiredExternalId && !payloadContainsExternalId(payload, requiredExternalId)
+  );
 }
 
 function normalizePositiveInteger(value: unknown): number {
@@ -271,21 +307,19 @@ async function refreshReservedDealById(
 async function loadReservedDealPayload(
   dealId: number,
   options?: {
+    forceRefresh?: boolean;
     requireExternalId?: string;
   }
 ): Promise<DataLayerReservedDealPayload> {
   const cachedPayload = await fetchReservedDealById(dealId);
-  const requiredExternalId = String(options?.requireExternalId ?? "").trim();
 
-  const hasRequiredContainer = requiredExternalId
-    ? payloadContainsExternalId(cachedPayload, requiredExternalId)
-    : true;
-
-  if (cachedPayload.active && hasRequiredContainer) {
+  if (!shouldRefreshReservedDealPayload(cachedPayload, options)) {
     return cachedPayload;
   }
 
-  const refreshedPayload = await refreshReservedDealById(dealId);
+  const refreshedPayload = canAttemptReservedDealRefresh(dealId)
+    ? await refreshReservedDealById(dealId)
+    : null;
   return refreshedPayload ?? cachedPayload;
 }
 
@@ -415,7 +449,9 @@ export const reservationsRouter = router({
   getByDealId: publicProcedure
     .input(z.object({ dealId: z.number().int().positive() }))
     .query(async ({ input }) => {
-      const payload = await loadReservedDealPayload(input.dealId);
+      const payload = await loadReservedDealPayload(input.dealId, {
+        forceRefresh: true,
+      });
       return buildReservedDealView(payload);
     }),
 
@@ -431,7 +467,9 @@ export const reservationsRouter = router({
       const catalogContainerId = parseReservedCatalogContainerKey(lookupKey);
       const payload = await loadReservedDealPayload(
         input.dealId,
-        catalogContainerId ? undefined : { requireExternalId: lookupKey }
+        catalogContainerId
+          ? { forceRefresh: true }
+          : { forceRefresh: true, requireExternalId: lookupKey }
       );
       const reservation = await buildReservedDealView(payload);
       const reservedContainer = reservation.containers.find(item =>

@@ -63,7 +63,11 @@ export default function ReservedDealDetail() {
 
   const { data, isLoading, error } = trpc.reservations.getByDealId.useQuery(
     { dealId },
-    { enabled: dealId > 0 },
+    {
+      enabled: dealId > 0,
+      refetchInterval: 30_000,
+      refetchOnWindowFocus: true,
+    },
   );
 
   const telegramUrl = useMemo(() => {
