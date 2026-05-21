@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
-import { ContainerPhoto } from "../../drizzle/schema";
+import { Container, ContainerPhoto } from "../../drizzle/schema";
 import { normalizeContainerDisplayName } from "../../shared/containerNaming";
 
 const DATA_LAYER_API_BASE_URL = (process.env.DATA_LAYER_API_BASE_URL ?? "")
@@ -117,6 +117,37 @@ function buildFallbackPhotos(
     createdAt: now,
     updatedAt: now,
   }));
+}
+
+function buildReservationFallbackContainer(
+  reservedContainer: ReservedDealContainerView,
+  lookupKey: string
+): Container {
+  const now = new Date();
+  const externalId = String(
+    reservedContainer.externalId ||
+      reservedContainer.containerNumber ||
+      lookupKey ||
+      reservedContainer.id
+  ).trim();
+
+  return {
+    id: reservedContainer.bitrixProductId
+      ? -Math.abs(reservedContainer.bitrixProductId)
+      : -Math.abs(Number(reservedContainer.id) || 1),
+    externalId,
+    bitrixProductId: reservedContainer.bitrixProductId,
+    name: reservedContainer.name || externalId,
+    size: reservedContainer.size || reservedContainer.containerType || "Не указан",
+    condition: reservedContainer.condition ?? "used",
+    price: reservedContainer.price,
+    description: reservedContainer.description,
+    terminalLocation: reservedContainer.terminal,
+    serial: reservedContainer.serial,
+    isActive: false,
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 export function payloadContainsExternalId(
@@ -332,7 +363,7 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
   );
   const mergedReservationContainers = Array.from(
     new Map(
-      [...reservationContainers, ...serialFallbackContainers].map(item => [
+      [...serialFallbackContainers, ...reservationContainers].map(item => [
         String(item.id),
         item,
       ])
@@ -488,27 +519,23 @@ export const reservationsRouter = router({
       const container = catalogContainerId
         ? await db.getContainerById(catalogContainerId)
         : await db.getContainerByExternalId(lookupKey);
-      if (!container) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Container not found",
-        });
-      }
+      const resolvedContainer =
+        container ?? buildReservationFallbackContainer(reservedContainer, lookupKey);
 
-      const photos = await db.getPhotosByContainerId(container.id);
+      const photos = container ? await db.getPhotosByContainerId(container.id) : [];
       const resolvedPhotos =
         photos.length > 0
           ? photos
-          : buildFallbackPhotos(reservedContainer.photos, container.id);
+          : buildFallbackPhotos(reservedContainer.photos, resolvedContainer.id);
 
       return {
-        ...container,
+        ...resolvedContainer,
         name: normalizeContainerDisplayName(
-          container.name,
-          container.size,
-          container.serial
+          resolvedContainer.name,
+          resolvedContainer.size,
+          resolvedContainer.serial
         ),
-        condition: reservedContainer.condition ?? container.condition,
+        condition: reservedContainer.condition ?? resolvedContainer.condition,
         photos: resolvedPhotos,
         reservation: {
           dealId: reservation.dealId,
