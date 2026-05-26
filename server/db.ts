@@ -27,12 +27,6 @@ import {
 let _db: any = null;
 let _pool: mysql.Pool | null = null;
 
-const PUBLIC_BLOCKED_STAGE_IDS = [
-  "PREPAYMENT_INVOICE",
-  "UC_ZZNB7I",
-  "FINAL_INVOICE",
-];
-
 const publicCatalogVisibilityGuard = () => sql`
   NOT EXISTS (
     SELECT 1
@@ -41,24 +35,8 @@ const publicCatalogVisibilityGuard = () => sql`
     WHERE dp.product_id = ${containers.bitrixProductId}
       AND dp.product_id IS NOT NULL
       AND (
-        (
-          COALESCE(dp.reserve_quantity, 0) > 0
-          AND d.stage_semantic_id = 'P'
-          AND (
-            dp.reserve_end IS NULL
-            OR dp.reserve_end >= CURDATE()
-          )
-        )
+        d.stage_semantic_id = 'P'
         OR d.stage_semantic_id = 'S'
-        OR (
-          d.stage_semantic_id = 'P'
-          AND (
-            CASE
-              WHEN LOCATE(':', d.stage_id) > 0 THEN SUBSTRING_INDEX(d.stage_id, ':', -1)
-              ELSE d.stage_id
-            END
-          ) IN (${sql.join(PUBLIC_BLOCKED_STAGE_IDS.map((stageId) => sql`${stageId}`), sql`, `)})
-        )
       )
   )
 `;
