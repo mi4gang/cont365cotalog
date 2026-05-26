@@ -28,15 +28,18 @@ let _db: any = null;
 let _pool: mysql.Pool | null = null;
 
 const publicCatalogVisibilityGuard = () => sql`
-  NOT EXISTS (
-    SELECT 1
-    FROM b_deal_products dp
-    INNER JOIN b_deals d ON d.id = dp.deal_id
-    WHERE dp.product_id = ${containers.bitrixProductId}
-      AND dp.product_id IS NOT NULL
-      AND (
-        d.stage_semantic_id = 'P'
-        OR d.stage_semantic_id = 'S'
+  (
+    ${containers.serial} = TRUE
+    OR NOT EXISTS (
+      SELECT 1
+      FROM b_deal_products dp
+      INNER JOIN b_deals d ON d.id = dp.deal_id
+      WHERE dp.product_id = ${containers.bitrixProductId}
+        AND dp.product_id IS NOT NULL
+        AND (
+          d.stage_semantic_id = 'P'
+          OR d.stage_semantic_id = 'S'
+        )
       )
   )
 `;
