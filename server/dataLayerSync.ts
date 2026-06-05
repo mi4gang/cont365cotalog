@@ -22,6 +22,7 @@ interface DataLayerCatalogItem {
   condition?: string | null;
   description?: string | null;
   serial?: boolean | string | number | null;
+  excellent?: boolean | string | number | null;
   photos?: string[];
   isActive?: boolean;
 }
@@ -287,6 +288,7 @@ async function fetchCatalogPayloadFromDataLayer(): Promise<{ items: DataLayerCat
           price: row.recommendedPrice,
           photos: undefined,
           serial: false,
+          excellent: false,
           isActive: true,
         }));
       return {
@@ -358,6 +360,7 @@ export async function ensureCatalogContainerHydrated(input: {
     recommendedPrice?: string | number | null;
     photos?: string[] | null;
     serial?: boolean | null;
+    excellent?: boolean | null;
     description?: string | null;
     condition?: "new" | "used" | null;
   } | null;
@@ -409,6 +412,7 @@ export async function ensureCatalogContainerHydrated(input: {
         normalizeExternalId(reservationSnapshot?.containerNumber);
       const fallbackPhotos = normalizePhotoUrls(reservationSnapshot?.photos);
       const fallbackSerial = Boolean(reservationSnapshot?.serial);
+      const fallbackExcellent = Boolean(reservationSnapshot?.excellent);
 
       if (!fallbackExternalId) {
         if (requestedBitrixProductId) {
@@ -435,6 +439,7 @@ export async function ensureCatalogContainerHydrated(input: {
           : String(reservationSnapshot?.description ?? "").trim() || undefined,
         terminalLocation: String(reservationSnapshot?.terminal ?? "").trim() || undefined,
         serial: fallbackSerial,
+        excellent: fallbackExcellent,
         isActive: true,
       } as const;
 
@@ -466,6 +471,7 @@ export async function ensureCatalogContainerHydrated(input: {
     const bitrixProductId = normalizeBitrixProductId(row.bitrixProductId) ?? requestedBitrixProductId;
     const photos = normalizePhotoUrls(row.photos);
     const serial = toBoolean(row.serial);
+    const excellent = toBoolean(row.excellent);
     const normalizedName = normalizeContainerDisplayName(
       serial ? (row.containerNumber ?? row.name ?? externalId) : (row.name ?? externalId),
       row.containerType,
@@ -483,6 +489,7 @@ export async function ensureCatalogContainerHydrated(input: {
         : String(row.description ?? "").trim() || undefined,
       terminalLocation: String(row.terminal ?? "").trim() || undefined,
       serial,
+      excellent,
       isActive: row.isActive !== false,
     } as const;
 
@@ -579,6 +586,7 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
       const photos = normalizePhotoUrls(row.photos);
       const bitrixProductId = normalizeBitrixProductId(row.bitrixProductId);
       const serial = toBoolean(row.serial);
+      const excellent = toBoolean(row.excellent);
       const normalizedName = normalizeContainerDisplayName(
         serial ? (row.containerNumber ?? row.name ?? externalId) : (row.name ?? externalId),
         row.containerType,
@@ -596,6 +604,7 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
           : String(row.description ?? "").trim() || undefined,
         terminalLocation: String(row.terminal ?? "").trim() || undefined,
         serial,
+        excellent,
         isActive: row.isActive !== false,
       } as const;
 

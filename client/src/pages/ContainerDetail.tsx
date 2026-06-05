@@ -301,9 +301,18 @@ export default function ContainerDetail() {
           ) : (
             <div className="mb-4 sm:mb-6">
               <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">{title}</h1>
-              {container.serial ? (
-                <div className="mt-3 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ background: "rgba(249, 115, 22, 0.92)" }}>
-                  Как на фото
+              {(container.serial || container.excellent) ? (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {container.serial ? (
+                    <div className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ background: "rgba(249, 115, 22, 0.92)" }}>
+                      Как на фото
+                    </div>
+                  ) : null}
+                  {container.excellent ? (
+                    <div className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ background: "rgba(22, 163, 74, 0.95)" }}>
+                      Отличный
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -430,15 +439,28 @@ export default function ContainerDetail() {
 
                     <div className="pb-3 mb-3" style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.15)" }}>
                       <p className="text-slate-400 text-xs sm:text-sm mb-1">Состояние</p>
-                      <span
-                        className="inline-block text-xs font-semibold px-3 py-1 rounded-full"
-                        style={{
-                          ...badgeStyle,
-                          color: "#fff",
-                        }}
-                      >
-                        {container.condition === "new" ? "Новый" : "Б/У"}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className="inline-block text-xs font-semibold px-3 py-1 rounded-full"
+                          style={{
+                            ...badgeStyle,
+                            color: "#fff",
+                          }}
+                        >
+                          {container.condition === "new" ? "Новый" : "Б/У"}
+                        </span>
+                        {container.excellent ? (
+                          <span
+                            className="inline-block text-xs font-semibold px-3 py-1 rounded-full"
+                            style={{
+                              background: "rgba(22, 163, 74, 0.95)",
+                              color: "#fff",
+                            }}
+                          >
+                            Отличный
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
 
                     {!container.serial ? (

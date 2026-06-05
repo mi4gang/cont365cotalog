@@ -15,6 +15,7 @@ interface ContainerCardProps {
   detailNote?: string | null;
   actionLabel?: string;
   serial?: boolean;
+  excellent?: boolean;
   onClick?: () => void;
 }
 
@@ -33,6 +34,7 @@ export default function ContainerCard({
   detailNote,
   actionLabel = "Смотреть",
   serial = false,
+  excellent = false,
   onClick,
 }: ContainerCardProps) {
   const formatPrice = (price: string | null) => {
@@ -85,12 +87,24 @@ export default function ContainerCard({
           </div>
         )}
 
-        {serial ? (
-          <div
-            className="absolute top-3 left-3 text-[11px] font-semibold px-3 py-1 rounded-full"
-            style={{ background: "rgba(249, 115, 22, 0.92)", color: "#fff" }}
-          >
-            Как на фото
+        {(serial || excellent) ? (
+          <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5">
+            {serial ? (
+              <div
+                className="text-[11px] font-semibold px-3 py-1 rounded-full"
+                style={{ background: "rgba(249, 115, 22, 0.92)", color: "#fff" }}
+              >
+                Как на фото
+              </div>
+            ) : null}
+            {excellent ? (
+              <div
+                className="text-[11px] font-semibold px-3 py-1 rounded-full shadow-sm"
+                style={{ background: "rgba(22, 163, 74, 0.95)", color: "#fff" }}
+              >
+                Отличный
+              </div>
+            ) : null}
           </div>
         ) : null}
         

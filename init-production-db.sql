@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS `containers` (
 	`condition` enum('new','used') NOT NULL DEFAULT 'used',
 	`price` decimal(12,2),
 	`description` text,
+	`excellent` boolean NOT NULL DEFAULT false,
 	`isActive` boolean NOT NULL DEFAULT true,
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,

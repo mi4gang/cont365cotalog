@@ -18,6 +18,7 @@ interface DataLayerReservedDealContainer {
   containerType?: string | null;
   condition?: string | null;
   serial?: boolean | null;
+  excellent?: boolean | null;
   quantity?: number | null;
   terminal?: string;
   cost?: number;
@@ -54,6 +55,7 @@ interface ReservedDealContainerView {
   condition: "new" | "used" | null;
   terminal: string;
   serial: boolean;
+  excellent: boolean;
   quantity: number;
   price: string | null;
   reserveStart: string | null;
@@ -144,6 +146,7 @@ function buildReservationFallbackContainer(
     description: reservedContainer.description,
     terminalLocation: reservedContainer.terminal,
     serial: reservedContainer.serial,
+    excellent: reservedContainer.excellent,
     isActive: false,
     createdAt: now,
     updatedAt: now,
@@ -227,6 +230,7 @@ async function loadSerialReservationFallback(
         COALESCE(NULLIF(TRIM(p.name), ''), NULLIF(TRIM(dp.product_name), ''), CONCAT('ID ', COALESCE(dp.product_id, dp.id))) AS containerNumber,
         NULLIF(TRIM(p.container_type), '') AS containerType,
         NULLIF(TRIM(p.\`condition\`), '') AS productCondition,
+        COALESCE(p.excellent, 0) AS excellent,
         COALESCE(dp.quantity, 0) AS quantity,
         COALESCE(dp.reserve_quantity, 0) AS reserveQuantity,
         COALESCE(NULLIF(TRIM(s.title), ''), 'Не указан') AS terminal,
@@ -266,6 +270,7 @@ async function loadSerialReservationFallback(
     containerType: row.containerType ?? null,
     condition: row.productCondition ?? null,
     serial: true,
+    excellent: Boolean(row.excellent),
     quantity: normalizePositiveInteger(row.reserveQuantity ?? row.quantity),
     terminal: row.terminal ?? "Не указан",
     cost: row.cost != null ? Number(row.cost) : undefined,
@@ -433,6 +438,7 @@ async function buildReservedDealView(payload: DataLayerReservedDealPayload) {
         terminal:
           item.terminal ?? catalogContainer?.terminalLocation ?? "Не указан",
         serial,
+        excellent: Boolean(catalogContainer?.excellent ?? item.excellent ?? false),
         quantity,
         price:
           catalogContainer?.price ??

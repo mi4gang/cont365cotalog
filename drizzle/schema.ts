@@ -53,6 +53,8 @@ export const containers = mysqlTable(TABLE_NAMES.containers, {
   terminalLocation: varchar("terminalLocation", { length: 128 }),
   /** Serial/vitrine position: showcase model, not a unique in-stock unit */
   serial: boolean("serial").default(false).notNull(),
+  /** Visual quality marker from Bitrix product checkbox */
+  excellent: boolean("excellent").default(false).notNull(),
   /** Is container available/visible in catalog */
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
