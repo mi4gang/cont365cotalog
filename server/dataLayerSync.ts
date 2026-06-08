@@ -644,6 +644,7 @@ async function applyDataLayerCatalogRow(
 
 export async function refreshCatalogContainerFromDataLayer(input: {
   bitrixProductId?: number | string | null;
+  productIds?: Array<number | string> | null;
   containerNumber?: string | null;
 }): Promise<CatalogTargetedRefreshResult> {
   const releaseLock = tryAcquireCatalogWriteLock("data-layer-targeted-refresh");
@@ -667,6 +668,7 @@ export async function refreshCatalogContainerFromDataLayer(input: {
     const response = await axios.post<DataLayerCatalogTargetedRefreshPayload>(
       `${DATA_LAYER_API_BASE_URL}/api/catalog/containers/refresh`,
       {
+        productIds: normalizeTargetProductIds(input.productIds),
         productId: input.bitrixProductId ?? undefined,
         containerNumber: normalizeExternalId(input.containerNumber),
       },
@@ -735,6 +737,23 @@ export async function refreshCatalogContainerFromDataLayer(input: {
   } finally {
     releaseLock();
   }
+}
+
+function normalizeTargetProductIds(values: Array<number | string> | null | undefined): number[] {
+  const seen = new Set<number>();
+  const productIds: number[] = [];
+
+  for (const value of values ?? []) {
+    const productId = normalizeBitrixProductId(value);
+    if (productId === undefined || seen.has(productId)) {
+      continue;
+    }
+
+    seen.add(productId);
+    productIds.push(productId);
+  }
+
+  return productIds;
 }
 
 async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {

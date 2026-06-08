@@ -6,7 +6,10 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { startCatalogAutoSyncScheduler } from "../dataLayerSync";
+import {
+  refreshCatalogContainerFromDataLayer,
+  startCatalogAutoSyncScheduler,
+} from "../dataLayerSync";
 import { initDatabase } from "../initDatabase";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -38,6 +41,45 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // Serve uploaded files from /uploads directory
   app.use("/uploads", express.static("uploads"));
+  app.post("/api/catalog/containers/target-refresh", async (req, res) => {
+    const expectedToken = (process.env.CATALOG_TARGET_REFRESH_TOKEN ?? "").trim();
+    const receivedToken =
+      String(req.get("x-catalog-target-refresh-token") ?? "").trim() ||
+      String(req.query.token ?? "").trim();
+
+    if (expectedToken && receivedToken !== expectedToken) {
+      res.status(403).json({ ok: false, error: "forbidden" });
+      return;
+    }
+
+    const rawProductIds = Array.isArray(req.body?.productIds)
+      ? req.body.productIds
+      : req.body?.productId !== undefined || req.body?.bitrixProductId !== undefined
+        ? [req.body.productId ?? req.body.bitrixProductId]
+        : [];
+    const productIds = rawProductIds
+      .map((value: unknown) => Number(value))
+      .filter((value: number) => Number.isInteger(value) && value > 0)
+      .slice(0, 50);
+    const containerNumber =
+      typeof req.body?.containerNumber === "string"
+        ? req.body.containerNumber
+        : typeof req.body?.externalId === "string"
+          ? req.body.externalId
+          : undefined;
+
+    if (productIds.length === 0 && !containerNumber) {
+      res.status(400).json({ ok: false, error: "productIds or containerNumber is required" });
+      return;
+    }
+
+    const result = await refreshCatalogContainerFromDataLayer({
+      productIds,
+      containerNumber,
+    });
+
+    res.status(result.ok ? 200 : 400).json(result);
+  });
   // tRPC API
   app.use(
     "/api/trpc",
