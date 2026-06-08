@@ -1,6 +1,7 @@
 import axios from "axios";
 import * as db from "./db";
 import { getCatalogWriteLockStatus, tryAcquireCatalogWriteLock } from "./catalogWriteLock";
+import { localizePhotoUrls } from "./localStorage";
 import { normalizeContainerDisplayName } from "../shared/containerNaming";
 import type { Container } from "../drizzle/schema";
 import {
@@ -338,12 +339,17 @@ async function syncContainerPhotos(containerId: number, photoUrls: string[]): Pr
     return;
   }
 
-  const existingPhotos = await db.getPhotosByContainerId(containerId);
-  if (photoUrlsMatchCatalogPayload(existingPhotos, photoUrls)) {
+  const catalogPhotoUrls = await localizePhotoUrls(photoUrls);
+  if (catalogPhotoUrls.length === 0) {
     return;
   }
 
-  await db.replaceContainerPhotos(containerId, photoUrls);
+  const existingPhotos = await db.getPhotosByContainerId(containerId);
+  if (photoUrlsMatchCatalogPayload(existingPhotos, catalogPhotoUrls)) {
+    return;
+  }
+
+  await db.replaceContainerPhotos(containerId, catalogPhotoUrls);
 }
 
 function findCatalogRow(

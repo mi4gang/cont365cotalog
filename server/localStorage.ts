@@ -7,6 +7,14 @@ import crypto from "crypto";
 
 // Storage directory for uploaded files
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
+const IMAGE_DOWNLOAD_TIMEOUT_MS = Math.max(
+  5_000,
+  Number(process.env.CATALOG_IMAGE_DOWNLOAD_TIMEOUT_MS ?? 30_000)
+);
+const MAX_IMAGE_DOWNLOAD_BYTES = Math.max(
+  1_000_000,
+  Number(process.env.CATALOG_IMAGE_DOWNLOAD_MAX_BYTES ?? 25_000_000)
+);
 
 // Ensure uploads directory exists
 export async function ensureUploadsDir() {
@@ -26,12 +34,23 @@ function generateFilename(originalUrl: string): string {
   return `${hash}${ext}`;
 }
 
+function isRemoteUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value);
+}
+
 /**
  * Download image from URL and save to local storage
  * @param imageUrl - URL of the image to download
  * @returns Local file path (relative to server root)
  */
 export async function downloadAndSaveImage(imageUrl: string): Promise<string> {
+  if (imageUrl.startsWith("/uploads/")) {
+    return imageUrl;
+  }
+  if (!isRemoteUrl(imageUrl)) {
+    throw new Error(`Unsupported image URL: ${imageUrl}`);
+  }
+
   await ensureUploadsDir();
 
   const filename = generateFilename(imageUrl);
@@ -46,19 +65,55 @@ export async function downloadAndSaveImage(imageUrl: string): Promise<string> {
     // File doesn't exist, download it
   }
 
-  // Download image
-  const response = await fetch(imageUrl);
-  if (!response.ok) {
-    throw new Error(`Failed to download image: ${response.statusText}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), IMAGE_DOWNLOAD_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(imageUrl, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "ContCatLog image cache",
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to download image: ${response.statusText}`);
+    }
+
+    const contentLength = Number(response.headers.get("content-length") ?? 0);
+    if (contentLength > MAX_IMAGE_DOWNLOAD_BYTES) {
+      throw new Error(`Image is too large: ${contentLength} bytes`);
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.length > MAX_IMAGE_DOWNLOAD_BYTES) {
+      throw new Error(`Image is too large: ${buffer.length} bytes`);
+    }
+
+    await fs.writeFile(filepath, buffer);
+  } finally {
+    clearTimeout(timeout);
   }
-
-  const buffer = Buffer.from(await response.arrayBuffer());
-
-  // Save to disk
-  await fs.writeFile(filepath, buffer);
 
   // Return URL path (for serving via static middleware)
   return `/uploads/${filename}`;
+}
+
+export async function localizePhotoUrls(photoUrls: string[]): Promise<string[]> {
+  const localized = await Promise.all(
+    photoUrls.map(async (photoUrl) => {
+      try {
+        return await downloadAndSaveImage(photoUrl);
+      } catch (error) {
+        console.warn("[image-cache] Failed to localize image, keeping source URL", {
+          photoUrl,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return photoUrl;
+      }
+    })
+  );
+
+  return localized.filter((url) => url.length > 0);
 }
 
 /**
