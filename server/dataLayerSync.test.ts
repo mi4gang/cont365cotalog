@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeDataLayerManualSyncScope, shouldPublishCatalogRow } from "./dataLayerSync";
+import {
+  normalizeDataLayerManualSyncScope,
+  photoUrlsMatchCatalogPayload,
+  shouldPublishCatalogRow,
+} from "./dataLayerSync";
 
 describe("dataLayerSync", () => {
   it("defaults manual Data Layer sync scope to catalog", () => {
@@ -20,5 +24,20 @@ describe("dataLayerSync", () => {
     expect(shouldPublishCatalogRow(true, [], true)).toBe(true);
     expect(shouldPublishCatalogRow(true, ["https://example.com/1.jpg"], false)).toBe(true);
     expect(shouldPublishCatalogRow(false, [], false)).toBe(true);
+  });
+
+  it("keeps unchanged photo payloads out of the write path", () => {
+    expect(
+      photoUrlsMatchCatalogPayload(
+        [{ url: "https://example.com/1.jpg" }, { url: "https://example.com/2.jpg" }],
+        ["https://example.com/1.jpg", "https://example.com/2.jpg"],
+      ),
+    ).toBe(true);
+    expect(
+      photoUrlsMatchCatalogPayload(
+        [{ url: "https://example.com/1.jpg" }, { url: "https://example.com/2.jpg" }],
+        ["https://example.com/2.jpg", "https://example.com/1.jpg"],
+      ),
+    ).toBe(false);
   });
 });

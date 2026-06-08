@@ -346,6 +346,46 @@ export async function deactivateContainersNotIn(
   return toDeactivate.length;
 }
 
+export async function deactivateContainersNotInCatalogIdentities(input: {
+  externalIds: string[];
+  bitrixProductIds: number[];
+}): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+
+  const externalIds = new Set(
+    input.externalIds
+      .map((value) => String(value ?? "").trim())
+      .filter((value) => value.length > 0),
+  );
+  const bitrixProductIds = new Set(
+    input.bitrixProductIds.filter((value) => Number.isInteger(value) && value > 0),
+  );
+
+  const activeContainers = await db
+    .select()
+    .from(containers)
+    .where(eq(containers.isActive, true));
+
+  const toDeactivate = activeContainers.filter((container: Container) => {
+    if (container.bitrixProductId && bitrixProductIds.size > 0) {
+      return !bitrixProductIds.has(container.bitrixProductId);
+    }
+    return !externalIds.has(container.externalId);
+  });
+
+  if (toDeactivate.length === 0) {
+    return 0;
+  }
+
+  await db
+    .update(containers)
+    .set({ isActive: false })
+    .where(inArray(containers.id, toDeactivate.map((container: Container) => container.id)));
+
+  return toDeactivate.length;
+}
+
 // ==================== Container Photos ====================
 
 export async function getPhotosByContainerId(
@@ -418,6 +458,33 @@ export async function addContainerPhoto(
     .where(eq(containerPhotos.id, result.id))
     .limit(1);
   return photos[0] ?? null;
+}
+
+export async function replaceContainerPhotos(
+  containerId: number,
+  photoUrls: string[]
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.transaction(async (tx: any) => {
+    await tx.delete(containerPhotos).where(eq(containerPhotos.containerId, containerId));
+
+    if (photoUrls.length === 0) {
+      return;
+    }
+
+    await tx.insert(containerPhotos).values(
+      photoUrls.map((url, index) => ({
+        containerId,
+        url,
+        displayOrder: index + 1,
+        isMain: index === 0,
+      })),
+    );
+  });
+
+  return true;
 }
 
 export async function updatePhotoOrder(

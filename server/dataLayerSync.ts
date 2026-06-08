@@ -300,20 +300,15 @@ async function fetchCatalogPayloadFromDataLayer(): Promise<{ items: DataLayerCat
   }
 }
 
-async function replaceContainerPhotos(containerId: number, photoUrls: string[]): Promise<void> {
-  const existingPhotos = await db.getPhotosByContainerId(containerId);
-  for (const photo of existingPhotos) {
-    await db.deletePhoto(photo.id);
+export function photoUrlsMatchCatalogPayload(
+  existingPhotos: Array<{ url: string }>,
+  photoUrls: string[],
+): boolean {
+  if (existingPhotos.length !== photoUrls.length) {
+    return false;
   }
 
-  for (let i = 0; i < photoUrls.length; i += 1) {
-    await db.addContainerPhoto({
-      containerId,
-      url: photoUrls[i],
-      displayOrder: i + 1,
-      isMain: i === 0,
-    });
-  }
+  return existingPhotos.every((photo, index) => photo.url === photoUrls[index]);
 }
 
 async function syncContainerPhotos(containerId: number, photoUrls: string[]): Promise<void> {
@@ -323,7 +318,12 @@ async function syncContainerPhotos(containerId: number, photoUrls: string[]): Pr
     return;
   }
 
-  await replaceContainerPhotos(containerId, photoUrls);
+  const existingPhotos = await db.getPhotosByContainerId(containerId);
+  if (photoUrlsMatchCatalogPayload(existingPhotos, photoUrls)) {
+    return;
+  }
+
+  await db.replaceContainerPhotos(containerId, photoUrls);
 }
 
 function findCatalogRow(
@@ -577,6 +577,7 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
     const identityIndex = buildContainerIdentityIndex(await db.getAllContainers(false));
 
     const processedExternalIds: string[] = [];
+    const processedBitrixProductIds: number[] = [];
 
     for (const row of catalogRows) {
       const externalId = normalizeExternalId(row.containerNumber);
@@ -585,6 +586,9 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
       processedExternalIds.push(externalId);
       const photos = normalizePhotoUrls(row.photos);
       const bitrixProductId = normalizeBitrixProductId(row.bitrixProductId);
+      if (bitrixProductId) {
+        processedBitrixProductIds.push(bitrixProductId);
+      }
       const serial = toBoolean(row.serial);
       const excellent = toBoolean(row.excellent);
       const normalizedName = normalizeContainerDisplayName(
@@ -650,7 +654,10 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
       }
     }
 
-    deactivated = await db.deactivateContainersNotIn(processedExternalIds);
+    deactivated = await db.deactivateContainersNotInCatalogIdentities({
+      externalIds: processedExternalIds,
+      bitrixProductIds: processedBitrixProductIds,
+    });
 
     state.lastFinishedAt = new Date().toISOString();
     state.lastSuccess = true;
