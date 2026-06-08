@@ -11,6 +11,7 @@ import {
 import {
   getCatalogSyncMode,
   getCatalogSyncStatus,
+  refreshCatalogContainerFromDataLayer,
   startCatalogSync,
   setCatalogSyncMode,
 } from "../dataLayerSync";
@@ -296,6 +297,20 @@ export const adminContainersRouter = router({
     console.log("[catalog-sync] syncFromDataLayer handler return", result);
     return result;
   }),
+
+  refreshContainerFromDataLayer: adminProcedure
+    .input(
+      z.object({
+        bitrixProductId: z.number().int().positive().optional(),
+        containerNumber: z.string().trim().min(1).optional(),
+      }).refine(
+        value => value.bitrixProductId !== undefined || Boolean(value.containerNumber),
+        { message: "bitrixProductId or containerNumber is required" }
+      )
+    )
+    .mutation(async ({ input }) => {
+      return refreshCatalogContainerFromDataLayer(input);
+    }),
 
   // Get all containers (including inactive)
   list: adminProcedure.query(async () => {

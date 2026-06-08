@@ -386,6 +386,34 @@ export async function deactivateContainersNotInCatalogIdentities(input: {
   return toDeactivate.length;
 }
 
+export async function deactivateContainersByBitrixProductIds(
+  bitrixProductIds: number[]
+): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+
+  const ids = Array.from(
+    new Set(bitrixProductIds.filter((value) => Number.isInteger(value) && value > 0))
+  );
+  if (ids.length === 0) return 0;
+
+  const activeRows = await db
+    .select()
+    .from(containers)
+    .where(and(eq(containers.isActive, true), inArray(containers.bitrixProductId, ids)));
+
+  if (activeRows.length === 0) {
+    return 0;
+  }
+
+  await db
+    .update(containers)
+    .set({ isActive: false })
+    .where(inArray(containers.id, activeRows.map((container: Container) => container.id)));
+
+  return activeRows.length;
+}
+
 // ==================== Container Photos ====================
 
 export async function getPhotosByContainerId(

@@ -98,6 +98,7 @@ export default function AdminDashboard() {
   const [editPrice, setEditPrice] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editIsActive, setEditIsActive] = useState(true);
+  const [targetRefreshValue, setTargetRefreshValue] = useState("");
 
   const { data: containers, refetch: refetchContainers } = trpc.adminContainers.list.useQuery();
   const { data: importHistory } = trpc.adminContainers.getImportHistory.useQuery();
@@ -135,6 +136,24 @@ export default function AdminDashboard() {
     onError: (err) => {
       toast.error(err.message || "Ошибка синхронизации с Data Layer");
       refetchDataLayerSyncStatus();
+    },
+  });
+
+  const targetRefreshMutation = trpc.adminContainers.refreshContainerFromDataLayer.useMutation({
+    onSuccess: (result) => {
+      if (!result.ok) {
+        toast.error(result.error || "Контейнер не обновлен");
+        return;
+      }
+      toast.success(
+        `Обновлено: добавлено ${result.added}, изменено ${result.updated}, скрыто ${result.deactivated}`
+      );
+      setTargetRefreshValue("");
+      refetchContainers();
+      refetchDataLayerSyncStatus();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Ошибка быстрого обновления");
     },
   });
 
@@ -321,6 +340,21 @@ export default function AdminDashboard() {
     if (dataLayerSyncStatus?.lastSuccess === false) return "text-red-600";
     return "text-slate-600";
   }, [dataLayerSyncStatus?.isRunning, dataLayerSyncStatus?.lastSuccess]);
+
+  const submitTargetRefresh = () => {
+    const value = targetRefreshValue.trim();
+    if (!value) {
+      toast.error("Введите номер контейнера или Bitrix ID");
+      return;
+    }
+
+    if (/^\d+$/.test(value)) {
+      targetRefreshMutation.mutate({ bitrixProductId: Number(value) });
+      return;
+    }
+
+    targetRefreshMutation.mutate({ containerNumber: value.toUpperCase() });
+  };
 
   useEffect(() => {
     const wasRunning = previousSyncRunningRef.current;
@@ -561,6 +595,43 @@ export default function AdminDashboard() {
                         )}
                       </Button>
                     </div>
+                  </div>
+                  <div className="flex flex-col gap-2 rounded-md border bg-white p-3 sm:flex-row sm:items-end">
+                    <div className="flex-1">
+                      <Label htmlFor="target-refresh" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Быстро обновить контейнер
+                      </Label>
+                      <Input
+                        id="target-refresh"
+                        value={targetRefreshValue}
+                        onChange={(event) => setTargetRefreshValue(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" && !targetRefreshMutation.isPending) {
+                            submitTargetRefresh();
+                          }
+                        }}
+                        placeholder="Номер контейнера или Bitrix ID"
+                        className="mt-1"
+                      />
+                    </div>
+                    <Button
+                      onClick={submitTargetRefresh}
+                      disabled={targetRefreshMutation.isPending || dataLayerSyncStatus?.isRunning}
+                      size="sm"
+                      className="sm:mb-px"
+                    >
+                      {targetRefreshMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Обновляю...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Обновить
+                        </>
+                      )}
+                    </Button>
                   </div>
                   <div className="rounded-md border bg-white p-3">
                     <div className="flex items-center justify-between gap-2">

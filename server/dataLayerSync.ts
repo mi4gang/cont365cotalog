@@ -32,6 +32,17 @@ interface DataLayerPayload {
   generatedAt?: string;
 }
 
+interface DataLayerCatalogTargetedRefreshPayload {
+  ok?: boolean;
+  error?: string;
+  productIds?: Array<number | string>;
+  upsert?: DataLayerCatalogItem[];
+  deactivate?: Array<{
+    bitrixProductId?: number | string;
+  }>;
+  generatedAt?: string;
+}
+
 interface DataLayerProcontainerPayload {
   stock?: Array<{
     bitrixProductId?: number | string;
@@ -117,6 +128,15 @@ export interface CatalogSyncResult {
 export interface CatalogSyncStartResult extends CatalogSyncResult {
   started: boolean;
   alreadyRunning: boolean;
+}
+
+export interface CatalogTargetedRefreshResult {
+  ok: boolean;
+  added: number;
+  updated: number;
+  deactivated: number;
+  productIds: number[];
+  error?: string;
 }
 
 export function normalizeDataLayerManualSyncScope(value: unknown): "catalog" | "fast" | "full" {
@@ -539,6 +559,182 @@ export function shouldPublishCatalogRow(
   hasExistingPhotos: boolean,
 ): boolean {
   return !supportsPhotos || photoUrls.length > 0 || hasExistingPhotos;
+}
+
+function buildCatalogPayloadFromDataLayerRow(row: DataLayerCatalogItem) {
+  const externalId = normalizeExternalId(row.containerNumber);
+  const bitrixProductId = normalizeBitrixProductId(row.bitrixProductId);
+  const serial = toBoolean(row.serial);
+  const excellent = toBoolean(row.excellent);
+  const normalizedName = normalizeContainerDisplayName(
+    serial ? (row.containerNumber ?? row.name ?? externalId) : (row.name ?? externalId),
+    row.containerType,
+    serial,
+  );
+
+  return {
+    externalId,
+    bitrixProductId,
+    photos: normalizePhotoUrls(row.photos),
+    payload: {
+      externalId,
+      bitrixProductId,
+      name: normalizedName || externalId,
+      size: normalizeSize(row.containerType),
+      condition: normalizeCondition(row.condition),
+      price: toNumber(row.price) > 0 ? String(toNumber(row.price)) : undefined,
+      description: serial
+        ? getSerialSalesDescription()
+        : String(row.description ?? "").trim() || undefined,
+      terminalLocation: String(row.terminal ?? "").trim() || undefined,
+      serial,
+      excellent,
+      isActive: row.isActive !== false,
+    } as const,
+  };
+}
+
+async function applyDataLayerCatalogRow(
+  identityIndex: ReturnType<typeof buildContainerIdentityIndex>,
+  row: DataLayerCatalogItem,
+): Promise<"added" | "updated" | "skipped"> {
+  const { externalId, bitrixProductId, photos, payload } = buildCatalogPayloadFromDataLayerRow(row);
+  if (!externalId) {
+    return "skipped";
+  }
+
+  const { existing } = resolveContainerIdentityMatch(identityIndex, {
+    externalId,
+    bitrixProductId,
+    preferBitrixIdMatching: CATALOG_SYNC_USE_BITRIX_ID_MATCHING,
+  });
+
+  if (existing) {
+    const shouldPublish = shouldPublishCatalogRow(
+      true,
+      photos,
+      await hasExistingContainerPhotos(existing.id),
+    );
+    await db.updateContainer(existing.id, {
+      ...payload,
+      isActive: payload.isActive && shouldPublish,
+    });
+    registerContainerIdentity(identityIndex, {
+      ...existing,
+      externalId,
+      bitrixProductId: bitrixProductId ?? existing.bitrixProductId,
+    });
+    await syncContainerPhotos(existing.id, photos);
+    return "updated";
+  }
+
+  const shouldPublish = shouldPublishCatalogRow(true, photos, false);
+  const created = await db.createContainer({
+    ...payload,
+    isActive: payload.isActive && shouldPublish,
+  });
+  if (!created) {
+    return "skipped";
+  }
+
+  registerContainerIdentity(identityIndex, created);
+  await syncContainerPhotos(created.id, photos);
+  return "added";
+}
+
+export async function refreshCatalogContainerFromDataLayer(input: {
+  bitrixProductId?: number | string | null;
+  containerNumber?: string | null;
+}): Promise<CatalogTargetedRefreshResult> {
+  const releaseLock = tryAcquireCatalogWriteLock("data-layer-targeted-refresh");
+  if (!releaseLock) {
+    const lockStatus = getCatalogWriteLockStatus();
+    return {
+      ok: false,
+      added: 0,
+      updated: 0,
+      deactivated: 0,
+      productIds: [],
+      error: `Catalog is busy: ${lockStatus.lockedBy ?? "unknown"}`,
+    };
+  }
+
+  try {
+    if (!DATA_LAYER_API_BASE_URL) {
+      throw new Error("DATA_LAYER_API_BASE_URL is not configured");
+    }
+
+    const response = await axios.post<DataLayerCatalogTargetedRefreshPayload>(
+      `${DATA_LAYER_API_BASE_URL}/api/catalog/containers/refresh`,
+      {
+        productId: input.bitrixProductId ?? undefined,
+        containerNumber: normalizeExternalId(input.containerNumber),
+      },
+      {
+        timeout: 90_000,
+        validateStatus: (status) => (status >= 200 && status < 300) || status === 404 || status === 409,
+      },
+    );
+
+    if (response.status === 409) {
+      return {
+        ok: false,
+        added: 0,
+        updated: 0,
+        deactivated: 0,
+        productIds: [],
+        error: "Data Layer sync is already running",
+      };
+    }
+
+    if (response.status === 404 || !response.data?.ok) {
+      return {
+        ok: false,
+        added: 0,
+        updated: 0,
+        deactivated: 0,
+        productIds: [],
+        error: response.data?.error || "Data Layer target refresh failed",
+      };
+    }
+
+    let added = 0;
+    let updated = 0;
+    const identityIndex = buildContainerIdentityIndex(await db.getAllContainers(false));
+
+    for (const row of response.data.upsert ?? []) {
+      const result = await applyDataLayerCatalogRow(identityIndex, row);
+      if (result === "added") added += 1;
+      if (result === "updated") updated += 1;
+    }
+
+    const productIds = (response.data.productIds ?? [])
+      .map((value) => normalizeBitrixProductId(value))
+      .filter((value): value is number => value !== undefined);
+    const deactivateProductIds = (response.data.deactivate ?? [])
+      .map((row) => normalizeBitrixProductId(row.bitrixProductId))
+      .filter((value): value is number => value !== undefined);
+    const deactivated = await db.deactivateContainersByBitrixProductIds(deactivateProductIds);
+
+    return {
+      ok: true,
+      added,
+      updated,
+      deactivated,
+      productIds,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      added: 0,
+      updated: 0,
+      deactivated: 0,
+      productIds: [],
+      error: error instanceof Error ? error.message : String(error),
+    };
+  } finally {
+    releaseLock();
+  }
 }
 
 async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
