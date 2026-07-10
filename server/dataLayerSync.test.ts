@@ -21,9 +21,41 @@ describe("dataLayerSync", () => {
 
   it("does not publish new photo-capable catalog rows without photos", () => {
     expect(shouldPublishCatalogRow(true, [], false)).toBe(false);
-    expect(shouldPublishCatalogRow(true, [], true)).toBe(true);
-    expect(shouldPublishCatalogRow(true, ["https://example.com/1.jpg"], false)).toBe(true);
-    expect(shouldPublishCatalogRow(false, [], false)).toBe(true);
+    expect(
+      shouldPublishCatalogRow(true, [], true, { terminalLocation: "Шубино" }),
+    ).toBe(true);
+    expect(
+      shouldPublishCatalogRow(true, ["https://example.com/1.jpg"], false, {
+        terminalLocation: "Шубино",
+      }),
+    ).toBe(true);
+    expect(
+      shouldPublishCatalogRow(false, [], false, { terminalLocation: "Шубино" }),
+    ).toBe(true);
+  });
+
+  it("does not publish regular catalog rows before terminal is known", () => {
+    expect(
+      shouldPublishCatalogRow(true, ["https://example.com/1.jpg"], false, {
+        terminalLocation: "",
+      }),
+    ).toBe(false);
+    expect(
+      shouldPublishCatalogRow(true, ["https://example.com/1.jpg"], false, {
+        terminalLocation: "Не указан",
+      }),
+    ).toBe(false);
+    expect(
+      shouldPublishCatalogRow(true, ["https://example.com/1.jpg"], false, {
+        terminalLocation: "Голдконтейнер, сухой порт",
+      }),
+    ).toBe(true);
+    expect(
+      shouldPublishCatalogRow(true, ["https://example.com/1.jpg"], false, {
+        terminalLocation: "",
+        serial: true,
+      }),
+    ).toBe(true);
   });
 
   it("keeps unchanged photo payloads out of the write path", () => {

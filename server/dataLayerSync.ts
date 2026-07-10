@@ -112,9 +112,11 @@ const DATA_LAYER_MANUAL_SYNC_POLL_MS = Math.max(
 const DATA_LAYER_MANUAL_SYNC_SCOPE = normalizeDataLayerManualSyncScope(
   process.env.DATA_LAYER_MANUAL_SYNC_SCOPE,
 );
+const TARGET_REFRESH_MISSING_TERMINAL_RETRY_DELAYS_MS = [45_000, 180_000] as const;
 
 let currentRun: Promise<CatalogSyncResult> | null = null;
 let intervalHandle: NodeJS.Timeout | null = null;
+const scheduledTargetRefreshRetries = new Set<string>();
 
 export interface CatalogSyncResult {
   ok: boolean;
@@ -563,8 +565,64 @@ export function shouldPublishCatalogRow(
   supportsPhotos: boolean,
   photoUrls: string[],
   hasExistingPhotos: boolean,
+  options?: {
+    terminalLocation?: string | null;
+    serial?: boolean | null;
+  },
 ): boolean {
-  return !supportsPhotos || photoUrls.length > 0 || hasExistingPhotos;
+  const hasRequiredPhotos = !supportsPhotos || photoUrls.length > 0 || hasExistingPhotos;
+  if (!hasRequiredPhotos) return false;
+  if (options?.serial) return true;
+  return hasPublishableTerminalLocation(options?.terminalLocation);
+}
+
+export function hasPublishableTerminalLocation(value: unknown): boolean {
+  const terminal = String(value ?? "").trim().toLowerCase();
+  return terminal.length > 0 && terminal !== "не указан";
+}
+
+function getMissingTerminalRetryKey(row: DataLayerCatalogItem): string | null {
+  const productId = normalizeBitrixProductId(row.bitrixProductId);
+  if (productId) return `product:${productId}`;
+
+  const externalId = normalizeExternalId(row.containerNumber);
+  if (externalId) return `external:${externalId}`;
+
+  return null;
+}
+
+function shouldRetryMissingTerminal(row: DataLayerCatalogItem): boolean {
+  if (row.isActive === false) return false;
+  if (toBoolean(row.serial)) return false;
+  return !hasPublishableTerminalLocation(row.terminal);
+}
+
+function scheduleMissingTerminalTargetRefreshRetry(
+  row: DataLayerCatalogItem,
+  nextAttempt: number,
+): void {
+  if (nextAttempt >= TARGET_REFRESH_MISSING_TERMINAL_RETRY_DELAYS_MS.length) {
+    return;
+  }
+
+  const key = getMissingTerminalRetryKey(row);
+  if (!key || scheduledTargetRefreshRetries.has(key)) {
+    return;
+  }
+
+  const productId = normalizeBitrixProductId(row.bitrixProductId);
+  const containerNumber = normalizeExternalId(row.containerNumber);
+  const delayMs = TARGET_REFRESH_MISSING_TERMINAL_RETRY_DELAYS_MS[nextAttempt];
+
+  scheduledTargetRefreshRetries.add(key);
+  setTimeout(() => {
+    scheduledTargetRefreshRetries.delete(key);
+    void refreshCatalogContainerFromDataLayer({
+      bitrixProductId: productId,
+      containerNumber,
+      retryAttempt: nextAttempt,
+    });
+  }, delayMs).unref?.();
 }
 
 function buildCatalogPayloadFromDataLayerRow(row: DataLayerCatalogItem) {
@@ -620,6 +678,10 @@ async function applyDataLayerCatalogRow(
       true,
       photos,
       await hasExistingContainerPhotos(existing.id),
+      {
+        terminalLocation: payload.terminalLocation,
+        serial: payload.serial,
+      },
     );
     await db.updateContainer(existing.id, {
       ...payload,
@@ -634,7 +696,10 @@ async function applyDataLayerCatalogRow(
     return "updated";
   }
 
-  const shouldPublish = shouldPublishCatalogRow(true, photos, false);
+  const shouldPublish = shouldPublishCatalogRow(true, photos, false, {
+    terminalLocation: payload.terminalLocation,
+    serial: payload.serial,
+  });
   const created = await db.createContainer({
     ...payload,
     isActive: payload.isActive && shouldPublish,
@@ -652,6 +717,7 @@ export async function refreshCatalogContainerFromDataLayer(input: {
   bitrixProductId?: number | string | null;
   productIds?: Array<number | string> | null;
   containerNumber?: string | null;
+  retryAttempt?: number;
 }): Promise<CatalogTargetedRefreshResult> {
   const releaseLock = tryAcquireCatalogWriteLock("data-layer-targeted-refresh");
   if (!releaseLock) {
@@ -714,6 +780,9 @@ export async function refreshCatalogContainerFromDataLayer(input: {
       const result = await applyDataLayerCatalogRow(identityIndex, row);
       if (result === "added") added += 1;
       if (result === "updated") updated += 1;
+      if (shouldRetryMissingTerminal(row)) {
+        scheduleMissingTerminalTargetRefreshRetry(row, (input.retryAttempt ?? -1) + 1);
+      }
     }
 
     const productIds = (response.data.productIds ?? [])
@@ -844,6 +913,10 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
           supportsPhotos,
           photos,
           await hasExistingContainerPhotos(existing.id),
+          {
+            terminalLocation: payload.terminalLocation,
+            serial: payload.serial,
+          },
         );
         // AUTO policy: overwrite all sync fields.
         await db.updateContainer(existing.id, {
@@ -860,7 +933,10 @@ async function runSyncInternal(source: SyncSource): Promise<CatalogSyncResult> {
         }
         updated += 1;
       } else {
-        const shouldPublish = shouldPublishCatalogRow(supportsPhotos, photos, false);
+        const shouldPublish = shouldPublishCatalogRow(supportsPhotos, photos, false, {
+          terminalLocation: payload.terminalLocation,
+          serial: payload.serial,
+        });
         const created = await db.createContainer({
           ...payload,
           isActive: payload.isActive && shouldPublish,
