@@ -19,8 +19,10 @@ describe("dataLayerSync", () => {
     expect(normalizeDataLayerManualSyncScope("full")).toBe("full");
   });
 
-  it("does not publish new photo-capable catalog rows without photos", () => {
-    expect(shouldPublishCatalogRow(true, [], false)).toBe(false);
+  it("publishes catalog rows without photos when terminal is known", () => {
+    expect(
+      shouldPublishCatalogRow(true, [], false, { terminalLocation: "Шубино" }),
+    ).toBe(true);
     expect(
       shouldPublishCatalogRow(true, [], true, { terminalLocation: "Шубино" }),
     ).toBe(true);

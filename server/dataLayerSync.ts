@@ -159,8 +159,12 @@ function toNumber(value: unknown): number {
   return 0;
 }
 
+const CONTAINER_NUMBER_RE = /\b[A-Z]{4}\d{6,8}\b/i;
+
 function normalizeExternalId(raw: unknown): string {
-  return String(raw ?? "").trim();
+  const normalized = String(raw ?? "").replace(/\s+/g, " ").trim();
+  const containerNumber = normalized.match(CONTAINER_NUMBER_RE)?.[0];
+  return containerNumber ? containerNumber.toUpperCase() : normalized;
 }
 
 function normalizeBitrixProductId(raw: unknown): number | undefined {
@@ -570,8 +574,9 @@ export function shouldPublishCatalogRow(
     serial?: boolean | null;
   },
 ): boolean {
-  const hasRequiredPhotos = !supportsPhotos || photoUrls.length > 0 || hasExistingPhotos;
-  if (!hasRequiredPhotos) return false;
+  void supportsPhotos;
+  void photoUrls;
+  void hasExistingPhotos;
   if (options?.serial) return true;
   return hasPublishableTerminalLocation(options?.terminalLocation);
 }
